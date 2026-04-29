@@ -17,9 +17,16 @@ interface TestRequestOptions {
 }
 
 /**
+ * Returns a complete Env merged with the defaults. Tests pass overrides to
+ * inject D1, ADMIN_UIDS, etc.
+ */
+export function makeEnv(overrides: Partial<Env> = {}): Env {
+  return { ...DEFAULT_ENV, ...overrides };
+}
+
+/**
  * Build and dispatch a request against a fresh Hono app instance with the
- * provided env overlay. Used by health/env smoke tests; integration-style tests
- * for tenant routes were dropped during the single-tenant collapse.
+ * provided env overlay.
  */
 export async function testRequest(path: string, options: TestRequestOptions = {}): Promise<Response> {
   const { method = 'GET', body, headers = {}, env = {} } = options;
@@ -32,6 +39,6 @@ export async function testRequest(path: string, options: TestRequestOptions = {}
 
   const app = createApp();
   const url = `https://test.local${path}`;
-  const mergedEnv: Env = { ...DEFAULT_ENV, ...env };
+  const mergedEnv = makeEnv(env);
   return app.fetch(new Request(url, init), mergedEnv);
 }
