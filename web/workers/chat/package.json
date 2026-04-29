@@ -1,0 +1,25 @@
+{
+  "name": "chat-worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "WORKER_URL=http://localhost:8788 bun scripts/test-chat.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "openai": "^4.77.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.9",
+    "wrangler": "^4.53.0"
+  }
+}

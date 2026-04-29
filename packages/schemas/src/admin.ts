@@ -1,0 +1,103 @@
+import { z } from 'zod';
+import { I18nMapSchema } from './common.js';
+import { RestaurantInfoSchema, RestaurantSocialsSchema, PromotionAlertSchema, OpeningScheduleSchema } from './restaurant.js';
+
+// ── Restaurant Settings ─────────────────────────────────────────────
+
+export const UpdateSettingsBodySchema = z.object({
+  name: z.string().optional(),
+  payoff: z.string().optional(),
+  info: RestaurantInfoSchema.optional(),
+  socials: RestaurantSocialsSchema.optional(),
+  promotionAlert: PromotionAlertSchema.optional(),
+  chatAgentPrompt: z.string().optional(),
+  aiChatEnabled: z.boolean().optional(),
+  enabledLocales: z.array(z.string()).nullable().optional(),
+  disabledLocales: z.array(z.string()).nullable().optional(),
+  customLocales: z.array(z.object({ code: z.string().min(2).max(10).regex(/^[a-z0-9-]+$/), name: z.string().min(1).max(50) })).nullable().optional(),
+});
+export type UpdateSettingsBody = z.infer<typeof UpdateSettingsBodySchema>;
+
+export const UpdateHoursBodySchema = z.object({
+  openingSchedule: OpeningScheduleSchema,
+});
+export type UpdateHoursBody = z.infer<typeof UpdateHoursBodySchema>;
+
+// ── Categories ──────────────────────────────────────────────────────
+
+export const UpdateCategoryBodySchema = z.object({
+  name: z.string().optional(),
+  i18n: I18nMapSchema.optional(),
+});
+export type UpdateCategoryBody = z.infer<typeof UpdateCategoryBodySchema>;
+
+export const ReorderItemsBodySchema = z.object({
+  items: z.array(z.object({
+    id: z.string(),
+    order: z.number(),
+  })),
+});
+export type ReorderItemsBody = z.infer<typeof ReorderItemsBodySchema>;
+
+// ── Menu Entries ────────────────────────────────────────────────────
+
+export const CreateEntryBodySchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  price: z.number(),
+  order: z.number().optional(),
+  outOfStock: z.boolean().optional(),
+  frozen: z.boolean().optional(),
+  allergens: z.array(z.string()).optional(),
+  priceUnit: z.string().optional(),
+  i18n: I18nMapSchema.optional(),
+  menuVisibility: z.array(z.string()).optional(),
+});
+export type CreateEntryBody = z.infer<typeof CreateEntryBodySchema>;
+
+export const UpdateEntryBodySchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  price: z.number().optional(),
+  outOfStock: z.boolean().optional(),
+  frozen: z.boolean().optional(),
+  allergens: z.array(z.string()).optional(),
+  priceUnit: z.string().optional(),
+  i18n: I18nMapSchema.optional(),
+  menuVisibility: z.array(z.string()).optional(),
+});
+export type UpdateEntryBody = z.infer<typeof UpdateEntryBodySchema>;
+
+export const MoveEntryBodySchema = z.object({
+  targetCategoryId: z.string(),
+});
+export type MoveEntryBody = z.infer<typeof MoveEntryBodySchema>;
+
+// ── Restaurants ─────────────────────────────────────────────────────
+
+export const CreateRestaurantBodySchema = z.object({
+  name: z.string().trim().min(1),
+  cuisineType: z.string().optional(),
+});
+export type CreateRestaurantBody = z.infer<typeof CreateRestaurantBodySchema>;
+
+export const SetPublishedBodySchema = z.object({
+  published: z.boolean(),
+});
+export type SetPublishedBody = z.infer<typeof SetPublishedBodySchema>;
+
+// ── Translate ───────────────────────────────────────────────────────
+
+export const TranslateRequestBodySchema = z.object({
+  sourceText: z.string().min(1).max(2000),
+  targetLocale: z.string().min(2).max(10).regex(/^[a-z0-9-]+$/),
+  field: z.enum(['name', 'desc', 'text']),
+});
+export type TranslateRequestBody = z.infer<typeof TranslateRequestBodySchema>;
+
+// ── Catalog View ────────────────────────────────────────────────────
+
+export const RecordViewBodySchema = z.object({
+  entryId: z.string().min(1),
+});
+export type RecordViewBody = z.infer<typeof RecordViewBodySchema>;

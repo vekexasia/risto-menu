@@ -1,0 +1,5 @@
+name = "menu-web"
+compatibility_date = "2024-09-23"
+
+# For Pages static deployment
+# Assets are served from the 'out' directory by wrangler pages deploy

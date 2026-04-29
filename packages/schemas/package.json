@@ -1,0 +1,12 @@
+{
+  "name": "@menu/schemas",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  }
+}

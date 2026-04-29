@@ -1,0 +1,43 @@
+# Copy this file to wrangler.toml and fill in the values for your deployment.
+# wrangler.toml is gitignored — keep your real IDs out of source control.
+#
+# See docs/self-hosting.md for the full bootstrap walkthrough.
+
+name = "menu-backend"
+main = "src/index.ts"
+compatibility_date = "2025-04-11"
+
+[vars]
+APP_ENV = "development"
+API_VERSION = "v1"
+SERVICE_NAME = "menu-backend"
+
+# Public URL of your R2 bucket (or a custom domain pointing at it).
+R2_PUBLIC_URL = "https://pub-XXXXXXXX.r2.dev"
+
+# Firebase Auth issuer + audience for admin JWT verification.
+# AUTH_ISSUER  = https://securetoken.google.com/<your-firebase-project-id>
+# AUTH_AUDIENCE = <your-firebase-project-id>
+AUTH_ISSUER = "https://securetoken.google.com/your-firebase-project-id"
+AUTH_AUDIENCE = "your-firebase-project-id"
+
+# Comma-separated list of origins allowed to hit this API.
+ALLOWED_ORIGINS = "http://localhost:3000,https://your-domain.example"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "risto-db"
+# Run: npx wrangler d1 create risto-db  → copy the returned database_id here.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "drizzle"
+
+# Optional: enable when you have an R2 bucket for catalog snapshots / images.
+# [[r2_buckets]]
+# binding = "PUBLIC_MENU_BUCKET"
+# bucket_name = "risto-public-menu"
+# preview_bucket_name = "risto-public-menu"
+
+# Optional: if you wire up a queue for analytics/audit events.
+# [[queues.producers]]
+# binding = "EVENTS_QUEUE"
+# queue = "risto-events"

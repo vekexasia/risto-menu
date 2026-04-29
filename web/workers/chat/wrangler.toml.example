@@ -1,0 +1,31 @@
+# Copy this file to wrangler.toml and fill in the values for your deployment.
+# wrangler.toml is gitignored — keep your real IDs out of source control.
+
+name = "menu-chat"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[kv_namespaces]]
+binding = "MENU_CACHE"
+# Run: npx wrangler kv namespace create MENU_CACHE  → copy the returned id here.
+id = "00000000000000000000000000000000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "risto-db"
+# Same D1 database the backend uses (see backend/wrangler.toml).
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "../../../backend/drizzle"
+
+[vars]
+LLM_PROVIDER = "openai"
+
+# Comma-separated list of explicit origins allowed to call the chat worker.
+# Localhost dev origins are allowed by default; do not list them here.
+# Add your production frontend(s).
+ALLOWED_ORIGINS = "https://your-domain.example"
+
+# Comma-separated list of hostname suffixes allowed over HTTPS.
+# Useful for Cloudflare Pages preview deployments (e.g. ".your-pages-project.pages.dev").
+# Leave empty to disable suffix matching.
+ALLOWED_HOST_SUFFIXES = ""

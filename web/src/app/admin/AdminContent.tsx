@@ -1,0 +1,363 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { getAuthInstance, signInWithGoogle, signOut } from "@/lib/firebase";
+import { getMe } from "@/lib/api";
+import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
+
+interface AuthState {
+  loading: boolean;
+  user: FirebaseUser | null;
+  isAdmin: boolean;
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+export default function AdminContent({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const searchParams = useSearchParams();
+  const [authState, setAuthState] = useState<AuthState>({
+    loading: true,
+    user: null,
+    isAdmin: false,
+  });
+
+  const { data, loadRestaurant } = useRestaurantStore();
+  const categories = useCategories();
+
+  useEffect(() => {
+    // Playwright test bypass — inject via page.addInitScript
+    if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+      const bypass = (window as Window & { __playwright_admin__?: { user: { uid: string; email: string; displayName?: string } } }).__playwright_admin__;
+      if (bypass) {
+        const fakeUser = { uid: bypass.user.uid, email: bypass.user.email, displayName: bypass.user.displayName ?? null } as import('firebase/auth').User;
+        setAuthState({ loading: false, user: fakeUser, isAdmin: true });
+        return;
+      }
+    }
+
+    const auth = getAuthInstance();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setAuthState({ loading: false, user: null, isAdmin: false });
+        return;
+      }
+      try {
+        const me = await getMe();
+        setAuthState({ loading: false, user, isAdmin: me.isAdmin === true });
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        setAuthState({ loading: false, user, isAdmin: false });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (authState.isAdmin) {
+      loadRestaurant();
+    }
+  }, [authState.isAdmin, loadRestaurant]);
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Sign in error:", error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
+
+  if (authState.loading) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FBFAF9", fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ color: "#888", fontSize: 13 }}>Caricamento...</div>
+      </div>
+    );
+  }
+
+  if (!authState.user) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FBFAF9", fontFamily: "system-ui, sans-serif", padding: 16 }}>
+        <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,.1)", padding: 32, maxWidth: 360, width: "100%", textAlign: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: "#1F1A14", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 16, color: "#C47A4F", fontWeight: 800 }}>R</div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1F1A14", margin: "0 0 6px" }}>Admin</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 24px" }}>Accedi per gestire il ristorante</p>
+          <button
+            onClick={handleSignIn}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "10px 16px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#424242", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            <svg style={{ width: 18, height: 18, flexShrink: 0 }} viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Accedi con Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authState.isAdmin) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FBFAF9", fontFamily: "system-ui, sans-serif", padding: 16 }}>
+        <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,.1)", padding: 32, maxWidth: 360, width: "100%", textAlign: "center" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <i className="fa-solid fa-ban" style={{ color: "#DC2626", fontSize: 18 }} />
+          </div>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>Accesso negato</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 6px" }}>Non sei un amministratore.</p>
+          <p style={{ fontSize: 12, color: "#BBB", margin: "0 0 20px", fontFamily: "monospace", wordBreak: "break-all" }}>{authState.user.email}</p>
+          <button onClick={handleSignOut} style={{ padding: "8px 20px", background: "#F4F2EE", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, color: "#424242", cursor: "pointer" }}>
+            Esci
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Authenticated layout ────────────────────────────────────────
+  const restaurantName = data?.name || "Admin";
+  const brandInitials = getInitials(restaurantName);
+  const userInitials = authState.user.displayName
+    ? getInitials(authState.user.displayName)
+    : (authState.user.email?.[0] || "U").toUpperCase();
+
+  const totalEntries = categories.reduce((s, c) => s + c.entries.length, 0);
+
+  const disabledCodes = (data?.features?.disabledLocales ?? []) as string[];
+  const customCodes = ((data?.features?.customLocales ?? []) as { code: string }[]).map((c) => c.code);
+  const translationLocales = Array.from(
+    new Set(
+      [
+        "en", "de", "fr", "es", "nl", "ru", "pt",
+        ...customCodes,
+      ].filter((code) => !disabledCodes.includes(code))
+    )
+  );
+  const entriesWithMissingTranslations = categories.reduce((sum, c) => {
+    return sum + c.entries.filter((e) => {
+      return translationLocales.some((locale) => {
+        const translated = e.i18n?.[locale];
+        const missingName = !!e.name?.trim() && !translated?.name?.trim();
+        const missingDesc = !!e.description?.trim() && !translated?.desc?.trim();
+        return missingName || missingDesc;
+      });
+    }).length;
+  }, 0);
+  const completeness =
+    totalEntries > 0
+      ? Math.round(((totalEntries - entriesWithMissingTranslations) / totalEntries) * 100)
+      : 100;
+
+  const s = (section: string, extra = "") => `/admin?s=${section}${extra}`;
+
+  const topNavItems: { href: string; label: string; matchPrefix?: string }[] = [
+    { href: s("categories"), label: "Menu" },
+    { href: s("analytics"), label: "Analisi" },
+    { href: s("settings-profile"), label: "Impostazioni", matchPrefix: "settings" },
+  ];
+
+  const firstCategoryId = categories[0]?.id;
+  const entriesHref = firstCategoryId
+    ? s("entries", `&category=${firstCategoryId}`)
+    : s("categories");
+
+  const gestioneItems: { href: string; icon: string; label: string; count?: number | string }[] = [
+    { href: s("categories"), icon: "fa-layer-group", label: "Categorie", count: categories.length },
+    { href: entriesHref, icon: "fa-utensils", label: "Piatti", count: totalEntries },
+    { href: s("hours"), icon: "fa-clock", label: "Orari" },
+    { href: s("analytics"), icon: "fa-chart-simple", label: "Analisi" },
+  ];
+
+  const settingsItems: { href: string; icon: string; label: string }[] = [
+    { href: s("settings-profile"), icon: "fa-user", label: "Profilo" },
+    { href: s("settings-languages"), icon: "fa-language", label: "Lingue" },
+    { href: s("settings-communications"), icon: "fa-bullhorn", label: "Comunicazioni" },
+    { href: s("settings-chat-ai"), icon: "fa-robot", label: "Chat AI" },
+    { href: s("settings-publishing"), icon: "fa-globe", label: "Pubblicazione" },
+  ];
+
+  const isActive = (href: string) => {
+    const ts = new URLSearchParams(href.split("?")[1] || "").get("s");
+    return ts !== null && searchParams.get("s") === ts;
+  };
+
+  const isActiveTab = (item: { href: string; matchPrefix?: string }) => {
+    if (isActive(item.href)) return true;
+    if (item.matchPrefix) {
+      const current = searchParams.get("s") ?? "";
+      return current === item.matchPrefix || current.startsWith(`${item.matchPrefix}-`);
+    }
+    return false;
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 13, color: "#424242", background: "#FBFAF9" }}>
+      <header style={{ height: 52, background: "#1F1A14", display: "flex", alignItems: "center", padding: "0 18px", gap: 20, flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 6, background: "#C47A4F", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, flexShrink: 0 }}>
+            {brandInitials}
+          </div>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.1, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {restaurantName}
+            </div>
+            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.6)" }}>Menu Admin</div>
+          </div>
+        </div>
+
+        <nav style={{ display: "flex", gap: 2, marginLeft: 16 }}>
+          {topNavItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                background: isActiveTab(item) ? "rgba(255,255,255,.1)" : "transparent",
+                border: "none",
+                color: isActiveTab(item) ? "#fff" : "rgba(255,255,255,.6)",
+                fontSize: 13,
+                fontWeight: 500,
+                padding: "6px 12px",
+                borderRadius: 5,
+                cursor: "pointer",
+                textDecoration: "none",
+                display: "inline-block",
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          <div title={authState.user.email || ""} style={{ width: 30, height: 30, borderRadius: "50%", background: "#BBA8E1", color: "#432975", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default" }}>
+            {userInitials}
+          </div>
+          <button
+            onClick={handleSignOut}
+            style={{ background: "transparent", border: "none", color: "rgba(255,255,255,.5)", fontSize: 11.5, cursor: "pointer", padding: "4px 6px", borderRadius: 4 }}
+          >
+            Esci
+          </button>
+        </div>
+      </header>
+
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <aside className="adm-sidebar" style={{ width: 230, background: "#fff", borderRight: "1px solid #E7E5E4", display: "flex", flexDirection: "column", padding: "14px 0", flexShrink: 0, overflowY: "auto" }}>
+          {data?.headerImage && (
+            <div style={{ margin: "0 10px 14px", borderRadius: 8, overflow: "hidden", position: "relative", height: 90, flexShrink: 0 }}>
+              <img
+                src={data.headerImage}
+                alt={restaurantName}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 60%)" }} />
+              <div style={{ position: "absolute", bottom: 6, left: 8, right: 8, fontSize: 11, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {restaurantName}
+              </div>
+            </div>
+          )}
+
+          <div style={{ padding: "0 10px", marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Gestione</div>
+            {gestioneItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "7px 10px",
+                  borderRadius: 5,
+                  fontSize: 13,
+                  textDecoration: "none",
+                  fontWeight: isActive(item.href) ? 600 : 400,
+                  color: isActive(item.href) ? "#A15E35" : "#666",
+                  background: isActive(item.href) ? "#F4E2D4" : "transparent",
+                  marginBottom: 1,
+                }}
+              >
+                <i className={`fa-solid ${item.icon}`} style={{ width: 14, opacity: isActive(item.href) ? 1 : 0.7, fontSize: 12 }} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.count != null && (
+                  <span style={{ fontSize: 10.5, color: isActive(item.href) ? "#A15E35" : "#BDB8B2", fontWeight: 600 }}>{item.count}</span>
+                )}
+              </Link>
+            ))}
+          </div>
+
+          <div style={{ padding: "0 10px", marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Impostazioni</div>
+            {settingsItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "7px 10px",
+                  borderRadius: 5,
+                  fontSize: 13,
+                  textDecoration: "none",
+                  fontWeight: isActive(item.href) ? 600 : 400,
+                  color: isActive(item.href) ? "#A15E35" : "#666",
+                  background: isActive(item.href) ? "#F4E2D4" : "transparent",
+                  marginBottom: 1,
+                }}
+              >
+                <i className={`fa-solid ${item.icon}`} style={{ width: 14, opacity: isActive(item.href) ? 1 : 0.7, fontSize: 12 }} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+              </Link>
+            ))}
+          </div>
+
+          <div style={{ marginTop: "auto", padding: "0 10px" }}>
+            <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 6, padding: "10px 12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#424242" }}>Completezza</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#1F8E5A" }}>{completeness}%</span>
+              </div>
+              <div style={{ height: 4, background: "#E7E5E4", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: "100%", background: "#1F8E5A", borderRadius: 2, width: `${completeness}%` }} />
+              </div>
+              <div style={{ fontSize: 10.5, color: "#888", marginTop: 6 }}>
+                {entriesWithMissingTranslations === 0
+                  ? "Tutti i piatti tradotti"
+                  : `${entriesWithMissingTranslations} piatt${entriesWithMissingTranslations === 1 ? "o" : "i"} con traduzioni mancanti`}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div style={{ flex: 1, display: "flex", minWidth: 0, overflow: "hidden" }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}

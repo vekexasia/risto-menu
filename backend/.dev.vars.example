@@ -1,0 +1,13 @@
+# Copy to `.dev.vars` (gitignored). Wrangler loads these for `wrangler dev`.
+# For production deployments, use `wrangler secret put <NAME>` instead —
+# never put secrets in wrangler.toml.
+
+# Required for the /admin/restaurants/:id/translate endpoint.
+# Leave blank if you do not need AI-assisted field translations.
+OPENAI_API_KEY=
+
+# Optional dev overrides. The deployed values live in wrangler.toml [vars].
+# APP_ENV=development
+# AUTH_ISSUER=https://securetoken.google.com/your-firebase-project-id
+# AUTH_AUDIENCE=your-firebase-project-id
+# ALLOWED_ORIGINS=http://localhost:3000

@@ -1,0 +1,662 @@
+import { Hono, type Context } from 'hono';
+import { eq, and, gte, lt, asc, desc, count, inArray } from 'drizzle-orm';
+import { requireAuth } from '../middleware/auth';
+import { attachDb, requireAdmin } from '../middleware/admin-guard';
+import * as schema from '../db/schema';
+import { computeLeaderboardMovement, VALID_PERIODS, periodToMs, computeWindows } from '../lib/analytics';
+import { buildCatalogFromDb, warmCatalogAfterMutation } from './catalog';
+import { parseBody } from '../lib/validate';
+import { validateImage } from '../lib/image';
+import { checkRateLimit } from '../lib/rate-limit';
+import {
+  UpdateSettingsBodySchema,
+  UpdateHoursBodySchema,
+  UpdateCategoryBodySchema,
+  ReorderItemsBodySchema,
+  CreateEntryBodySchema,
+  UpdateEntryBodySchema,
+  MoveEntryBodySchema,
+  TranslateRequestBodySchema,
+} from '@menu/schemas';
+import type { AppBindings } from '../types';
+
+// All admin routes require auth + db + admin gate.
+const admin = new Hono<AppBindings>();
+
+const base = [requireAuth, attachDb, requireAdmin] as const;
+
+// ── Catalog Preview (admin) ──────────────────────────────────────────
+
+admin.get('/catalog', ...base, async (c) => {
+  const catalog = await buildCatalogFromDb(c.get('db'), {
+    publicOnly: false,
+    includeHidden: true,
+  });
+  if (!catalog) return c.json({ error: 'Not found' }, 404);
+  return c.json(catalog);
+});
+
+// ── Settings ─────────────────────────────────────────────────────────
+
+admin.get('/settings', ...base, async (c) => {
+  const [row] = await c.get('db')
+    .select({
+      chatAgentPrompt: schema.settings.chatAgentPrompt,
+      aiChatEnabled: schema.settings.aiChatEnabled,
+      promotionAlert: schema.settings.promotionAlert,
+      publicationState: schema.settings.publicationState,
+      enabledLocales: schema.settings.enabledLocales,
+      disabledLocales: schema.settings.disabledLocales,
+      customLocales: schema.settings.customLocales,
+    })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1));
+
+  if (!row) return c.json({ error: 'Not found' }, 404);
+
+  return c.json({
+    chatAgentPrompt: row.chatAgentPrompt ?? '',
+    aiChatEnabled: row.aiChatEnabled,
+    promotionAlert: row.promotionAlert ?? null,
+    publicationState: row.publicationState,
+    enabledLocales: row.enabledLocales ?? null,
+    disabledLocales: row.disabledLocales ?? [],
+    customLocales: row.customLocales ?? [],
+  });
+});
+
+admin.put('/settings', ...base, async (c) => {
+  const body = await parseBody(c, UpdateSettingsBodySchema);
+  if (body instanceof Response) return body;
+
+  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.payoff !== undefined) updates.payoff = body.payoff;
+  if (body.info !== undefined) updates.info = body.info;
+  if (body.socials !== undefined) updates.socials = body.socials;
+  if (body.promotionAlert !== undefined) updates.promotionAlert = body.promotionAlert;
+  if (body.chatAgentPrompt !== undefined) updates.chatAgentPrompt = body.chatAgentPrompt;
+  if (body.aiChatEnabled !== undefined) updates.aiChatEnabled = body.aiChatEnabled;
+  if (body.enabledLocales !== undefined) updates.enabledLocales = body.enabledLocales;
+  if (body.disabledLocales !== undefined) updates.disabledLocales = body.disabledLocales;
+  if (body.customLocales !== undefined) updates.customLocales = body.customLocales;
+
+  await c.get('db')
+    .update(schema.settings)
+    .set(updates)
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+// ── Publish toggle ───────────────────────────────────────────────────
+
+admin.put('/publication', ...base, async (c) => {
+  const body = await c.req.json<{ published: boolean }>();
+  await c.get('db')
+    .update(schema.settings)
+    .set({
+      publicationState: body.published ? 'published' : 'draft',
+      updatedAt: Date.now(),
+    })
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+// ── Opening Hours ────────────────────────────────────────────────────
+
+admin.put('/hours', ...base, async (c) => {
+  const body = await parseBody(c, UpdateHoursBodySchema);
+  if (body instanceof Response) return body;
+
+  await c.get('db')
+    .update(schema.settings)
+    .set({
+      openingSchedule: body.openingSchedule,
+      updatedAt: Date.now(),
+    })
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+// ── Categories ───────────────────────────────────────────────────────
+
+admin.put('/categories/:categoryId', ...base, async (c) => {
+  const categoryId = c.req.param('categoryId');
+  const body = await parseBody(c, UpdateCategoryBodySchema);
+  if (body instanceof Response) return body;
+
+  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.i18n !== undefined) updates.i18n = body.i18n;
+
+  await c.get('db')
+    .update(schema.menuCategories)
+    .set(updates)
+    .where(eq(schema.menuCategories.id, categoryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.delete('/categories/:categoryId', ...base, async (c) => {
+  const categoryId = c.req.param('categoryId');
+  const db = c.get('db');
+
+  const entryRows = await db
+    .select({ id: schema.menuEntries.id })
+    .from(schema.menuEntries)
+    .where(eq(schema.menuEntries.categoryId, categoryId));
+  const entryIds = entryRows.map((entry) => entry.id);
+
+  if (entryIds.length > 0) {
+    await db
+      .delete(schema.catalogViews)
+      .where(inArray(schema.catalogViews.entryId, entryIds));
+  }
+
+  await db
+    .delete(schema.menuEntries)
+    .where(eq(schema.menuEntries.categoryId, categoryId));
+
+  await db
+    .delete(schema.menuCategories)
+    .where(eq(schema.menuCategories.id, categoryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.patch('/categories/reorder', ...base, async (c) => {
+  const body = await parseBody(c, ReorderItemsBodySchema);
+  if (body instanceof Response) return body;
+  const db = c.get('db');
+
+  for (const item of body.items) {
+    await db
+      .update(schema.menuCategories)
+      .set({ sortOrder: item.order, updatedAt: Date.now() })
+      .where(eq(schema.menuCategories.id, item.id));
+  }
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+// ── Menu Entries ─────────────────────────────────────────────────────
+
+admin.post('/categories/:categoryId/entries', ...base, async (c) => {
+  const categoryId = c.req.param('categoryId');
+
+  const [cat] = await c.get('db')
+    .select({ id: schema.menuCategories.id })
+    .from(schema.menuCategories)
+    .where(eq(schema.menuCategories.id, categoryId))
+    .limit(1);
+  if (!cat) return c.json({ error: 'Category not found' }, 404);
+
+  const body = await parseBody(c, CreateEntryBodySchema);
+  if (body instanceof Response) return body;
+
+  const id = crypto.randomUUID();
+  const visibility = mapVisibility(body.menuVisibility);
+
+  await c.get('db')
+    .insert(schema.menuEntries)
+    .values({
+      id,
+      categoryId,
+      name: body.name,
+      description: body.description || null,
+      // Convert euros to integer cents: €12.50 → 1250
+      price: Math.round(body.price * 100),
+      priceUnit: body.priceUnit || null,
+      outOfStock: body.outOfStock ?? false,
+      frozen: body.frozen ?? false,
+      sortOrder: body.order ?? 0,
+      visibility,
+      allergens: body.allergens || null,
+      i18n: body.i18n || null,
+    });
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, id }, 201);
+});
+
+admin.put('/entries/:entryId', ...base, async (c) => {
+  const entryId = c.req.param('entryId');
+  const body = await parseBody(c, UpdateEntryBodySchema);
+  if (body instanceof Response) return body;
+
+  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.description !== undefined) updates.description = body.description;
+  if (body.price !== undefined) updates.price = Math.round(body.price * 100);
+  if (body.outOfStock !== undefined) updates.outOfStock = body.outOfStock;
+  if (body.frozen !== undefined) updates.frozen = body.frozen;
+  if (body.allergens !== undefined) updates.allergens = body.allergens;
+  if (body.priceUnit !== undefined) updates.priceUnit = body.priceUnit;
+  if (body.i18n !== undefined) updates.i18n = body.i18n;
+  if (body.menuVisibility !== undefined) updates.visibility = mapVisibility(body.menuVisibility);
+
+  await c.get('db')
+    .update(schema.menuEntries)
+    .set(updates)
+    .where(eq(schema.menuEntries.id, entryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.patch('/entries/reorder', ...base, async (c) => {
+  const body = await parseBody(c, ReorderItemsBodySchema);
+  if (body instanceof Response) return body;
+  const db = c.get('db');
+
+  for (const item of body.items) {
+    await db
+      .update(schema.menuEntries)
+      .set({ sortOrder: item.order, updatedAt: Date.now() })
+      .where(eq(schema.menuEntries.id, item.id));
+  }
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.delete('/entries/:entryId', ...base, async (c) => {
+  const entryId = c.req.param('entryId');
+  const db = c.get('db');
+
+  const [entry] = await db
+    .select({ imageUrl: schema.menuEntries.imageUrl })
+    .from(schema.menuEntries)
+    .where(eq(schema.menuEntries.id, entryId))
+    .limit(1);
+
+  if (entry?.imageUrl) {
+    const bucket = c.env.PUBLIC_MENU_BUCKET;
+    if (bucket) {
+      const key = r2KeyFromUrl(entry.imageUrl);
+      if (key) await bucket.delete(key);
+    }
+  }
+
+  await db.delete(schema.menuEntries).where(eq(schema.menuEntries.id, entryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.post('/entries/:entryId/move', ...base, async (c) => {
+  const entryId = c.req.param('entryId');
+  const body = await parseBody(c, MoveEntryBodySchema);
+  if (body instanceof Response) return body;
+
+  const [targetCat] = await c.get('db')
+    .select({ id: schema.menuCategories.id })
+    .from(schema.menuCategories)
+    .where(eq(schema.menuCategories.id, body.targetCategoryId))
+    .limit(1);
+  if (!targetCat) return c.json({ error: 'Target category not found' }, 404);
+
+  await c.get('db')
+    .update(schema.menuEntries)
+    .set({
+      categoryId: body.targetCategoryId,
+      updatedAt: Date.now(),
+    })
+    .where(eq(schema.menuEntries.id, entryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+// ── Image Upload / Delete ────────────────────────────────────────────
+
+admin.post('/entries/:entryId/image', ...base, async (c) => {
+  const entryId = c.req.param('entryId');
+  const bucket = c.env.PUBLIC_MENU_BUCKET;
+
+  if (!bucket) return c.json({ error: 'R2 bucket not configured' }, 503);
+
+  const [entry] = await c.get('db')
+    .select({ id: schema.menuEntries.id })
+    .from(schema.menuEntries)
+    .where(eq(schema.menuEntries.id, entryId))
+    .limit(1);
+  if (!entry) return c.json({ error: 'Entry not found' }, 404);
+
+  const body = await c.req.arrayBuffer();
+  const validation = validateImage(body);
+  if ('error' in validation) return c.json({ error: validation.error }, validation.status);
+
+  const key = `images/entries/${entryId}-${Date.now()}${validation.ext}`;
+  await bucket.put(key, body, { httpMetadata: { contentType: validation.type } });
+
+  const r2Base = (c.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
+  if (!r2Base) return c.json({ error: 'R2_PUBLIC_URL not configured' }, 503);
+  const imageUrl = `${r2Base}/${key}`;
+
+  await c.get('db')
+    .update(schema.menuEntries)
+    .set({ imageUrl, updatedAt: Date.now() })
+    .where(eq(schema.menuEntries.id, entryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, imageUrl });
+});
+
+admin.delete('/entries/:entryId/image', ...base, async (c) => {
+  const entryId = c.req.param('entryId');
+  const bucket = c.env.PUBLIC_MENU_BUCKET;
+  const db = c.get('db');
+
+  const [entry] = await db
+    .select({ imageUrl: schema.menuEntries.imageUrl })
+    .from(schema.menuEntries)
+    .where(eq(schema.menuEntries.id, entryId))
+    .limit(1);
+
+  if (entry?.imageUrl && bucket) {
+    const key = r2KeyFromUrl(entry.imageUrl);
+    if (key) await bucket.delete(key);
+  }
+
+  await db
+    .update(schema.menuEntries)
+    .set({ imageUrl: null, updatedAt: Date.now() })
+    .where(eq(schema.menuEntries.id, entryId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.post('/header-image', ...base, async (c) => {
+  const upload = await uploadSettingsImage(c, 'header');
+  if ('response' in upload) return upload.response;
+
+  const db = c.get('db');
+  const [row] = await db
+    .select({ info: schema.settings.info })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1))
+    .limit(1);
+
+  const updatedInfo = {
+    ...(row?.info || {}),
+    headerImage: upload.imageUrl,
+  };
+
+  await db
+    .update(schema.settings)
+    .set({ info: updatedInfo, updatedAt: Date.now() })
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, imageUrl: upload.imageUrl });
+});
+
+admin.post('/promotion-image', ...base, async (c) => {
+  const upload = await uploadSettingsImage(c, 'promotion');
+  if ('response' in upload) return upload.response;
+
+  const db = c.get('db');
+  const [row] = await db
+    .select({ promotionAlert: schema.settings.promotionAlert })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1))
+    .limit(1);
+
+  const updatedPromotionAlert = {
+    ...((row?.promotionAlert as Record<string, unknown> | null) || {}),
+    url: upload.imageUrl,
+  };
+
+  await db
+    .update(schema.settings)
+    .set({ promotionAlert: updatedPromotionAlert, updatedAt: Date.now() })
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, imageUrl: upload.imageUrl });
+});
+
+// ── Analytics ────────────────────────────────────────────────────────
+
+admin.get('/analytics', ...base, async (c) => {
+  const db = c.get('db');
+
+  const periodParam = c.req.query('period') ?? '7d';
+  const ms = periodToMs(periodParam);
+  if (ms === undefined) {
+    return c.json({ error: `Invalid period. Valid values: ${VALID_PERIODS.join(', ')}` }, 400);
+  }
+  const periodMs = ms;
+
+  const limitParam = Number.parseInt(c.req.query('limit') ?? '10', 10);
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 10;
+
+  const now = Date.now();
+  const { currentStart, prevStart } = computeWindows(now, periodMs);
+
+  const currentViewedRaw = await db
+    .select({
+      entryId: schema.catalogViews.entryId,
+      name: schema.menuEntries.name,
+      categoryId: schema.menuEntries.categoryId,
+      categoryName: schema.menuCategories.name,
+      image: schema.menuEntries.imageUrl,
+      viewCount: count(schema.catalogViews.id),
+    })
+    .from(schema.catalogViews)
+    .leftJoin(schema.menuEntries, eq(schema.catalogViews.entryId, schema.menuEntries.id))
+    .leftJoin(schema.menuCategories, eq(schema.menuEntries.categoryId, schema.menuCategories.id))
+    .where(gte(schema.catalogViews.viewedAt, currentStart))
+    .groupBy(schema.catalogViews.entryId, schema.menuEntries.name, schema.menuEntries.categoryId, schema.menuCategories.name, schema.menuEntries.imageUrl)
+    .orderBy(desc(count(schema.catalogViews.id)), asc(schema.catalogViews.entryId))
+    .limit(limit);
+
+  let prevViewedRaw: Array<{ entryId: string | null; name: string | null; viewCount: number }> = [];
+  if (periodMs !== null) {
+    prevViewedRaw = await db
+      .select({
+        entryId: schema.catalogViews.entryId,
+        name: schema.menuEntries.name,
+        viewCount: count(schema.catalogViews.id),
+      })
+      .from(schema.catalogViews)
+      .leftJoin(schema.menuEntries, eq(schema.catalogViews.entryId, schema.menuEntries.id))
+      .where(
+        and(
+          gte(schema.catalogViews.viewedAt, prevStart),
+          lt(schema.catalogViews.viewedAt, currentStart),
+        ),
+      )
+      .groupBy(schema.catalogViews.entryId, schema.menuEntries.name)
+      .orderBy(desc(count(schema.catalogViews.id)), asc(schema.catalogViews.entryId));
+  }
+
+  const currentViewedNormalised = currentViewedRaw.map((item) => ({
+    entryId: item.entryId,
+    name: item.name ?? '(deleted)',
+    categoryId: item.categoryId,
+    categoryName: item.categoryName,
+    image: item.image,
+    viewCount: item.viewCount,
+  }));
+  const prevViewedNormalised = prevViewedRaw.map((item) => ({
+    entryId: item.entryId,
+    name: item.name ?? '(deleted)',
+    viewCount: item.viewCount,
+  }));
+  const viewedItems = computeLeaderboardMovement(currentViewedNormalised, prevViewedNormalised);
+
+  if (periodMs === null) {
+    for (const item of viewedItems) {
+      item.status = 'same';
+      item.delta = null;
+      item.previousRank = null;
+    }
+  }
+
+  let dailyTotals: { date: string; viewCount: number }[] | undefined;
+  if (periodParam === '7d' || periodParam === '30d') {
+    const dailyRaw = await db
+      .select({
+        dateBucket: schema.catalogViews.dateBucket,
+        viewCount: count(schema.catalogViews.id),
+      })
+      .from(schema.catalogViews)
+      .where(gte(schema.catalogViews.viewedAt, currentStart))
+      .groupBy(schema.catalogViews.dateBucket)
+      .orderBy(asc(schema.catalogViews.dateBucket));
+
+    const countByBucket = new Map<number, number>();
+    for (const row of dailyRaw) {
+      countByBucket.set(row.dateBucket, row.viewCount);
+    }
+
+    const days = periodParam === '7d' ? 7 : 30;
+    dailyTotals = [];
+    const oneDay = 24 * 60 * 60 * 1000;
+    for (let i = days - 1; i >= 0; i--) {
+      const t = now - i * oneDay;
+      const d = new Date(t);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      const bucket = y * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+      dailyTotals.push({ date: `${y}-${m}-${dd}`, viewCount: countByBucket.get(bucket) ?? 0 });
+    }
+  }
+
+  return c.json({
+    period: periodParam,
+    viewedItems,
+    dailyTotals,
+  });
+});
+
+// ── Translation ──────────────────────────────────────────────────────
+
+const LOCALE_DESCRIPTIONS: Record<string, string> = {
+  en: 'English',
+  de: 'German (Deutsch)',
+  fr: 'French (Français)',
+  vec: 'Venetian dialect (Veneto, northeastern Italy — spoken in the Venice region, distinct from standard Italian)',
+};
+
+admin.post('/translate', ...base, async (c) => {
+  const body = await parseBody(c, TranslateRequestBodySchema);
+  if (body instanceof Response) return body;
+
+  const uid = c.get('user').uid;
+  const limited = checkRateLimit(`translate:${uid}`, 30, 60_000);
+  if (limited) return limited;
+
+  const apiKey = c.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'Translation not configured (missing OPENAI_API_KEY)' }, 503);
+  }
+
+  const { sourceText, targetLocale, field } = body;
+  const localeName = LOCALE_DESCRIPTIONS[targetLocale] || targetLocale;
+  const isDesc = field === 'desc';
+  const isText = field === 'text';
+
+  const systemPrompt = isText
+    ? `You are a professional restaurant menu translator. Translate the following restaurant customer-facing notice from Italian to ${localeName}. Return only the translated text, nothing else. Preserve line breaks and any HTML formatting tags (<b>, <i>, <u>).`
+    : isDesc
+    ? `You are a professional restaurant menu translator. Translate the following menu item description from Italian to ${localeName}. Return only the translated text, nothing else. Preserve any HTML formatting tags (<b>, <i>, <u>).`
+    : `You are a professional restaurant menu translator. Translate the following menu item name from Italian to ${localeName}. Return only the translated name, nothing else.`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-5.4-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: sourceText },
+      ],
+      max_completion_tokens: 500,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    console.error('OpenAI translate error:', err);
+    return c.json({ error: 'Translation API error' }, 502);
+  }
+
+  const data = await response.json() as { choices: Array<{ message: { content: string } }> };
+  const translatedText = data.choices?.[0]?.message?.content?.trim() ?? '';
+
+  return c.json({ translatedText });
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+async function refreshPublicCatalog(c: Context<AppBindings>): Promise<void> {
+  try {
+    await warmCatalogAfterMutation(
+      c.env,
+      c.req.url,
+      c.get('db'),
+      c.get('user').uid,
+    );
+  } catch (error) {
+    console.error('catalog-cache-refresh-failed', { error });
+  }
+}
+
+function mapVisibility(menuVisibility: string[] | undefined): 'all' | 'seated' | 'takeaway' | 'hidden' {
+  if (!menuVisibility || menuVisibility.length === 0) return 'hidden';
+  const first = menuVisibility[0];
+  if (['all', 'seated', 'takeaway'].includes(first)) return first as 'all' | 'seated' | 'takeaway';
+  return 'all';
+}
+
+async function uploadSettingsImage(
+  c: Context<AppBindings>,
+  prefix: string,
+): Promise<{ imageUrl: string } | { response: Response }> {
+  const bucket = c.env.PUBLIC_MENU_BUCKET;
+  if (!bucket) return { response: c.json({ error: 'R2 bucket not configured' }, 503) };
+
+  const body = await c.req.arrayBuffer();
+  const validation = validateImage(body);
+  if ('error' in validation) {
+    return { response: c.json({ error: validation.error }, validation.status) };
+  }
+
+  const key = `images/settings/${prefix}-${Date.now()}${validation.ext}`;
+  await bucket.put(key, body, { httpMetadata: { contentType: validation.type } });
+
+  const r2Base = (c.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
+  if (!r2Base) return { response: c.json({ error: 'R2_PUBLIC_URL not configured' }, 503) };
+  return { imageUrl: `${r2Base}/${key}` };
+}
+
+function r2KeyFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/^\//, '');
+    if (path.startsWith('images/')) return path;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export const adminRoutes = admin;

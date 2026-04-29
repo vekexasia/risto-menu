@@ -1,0 +1,306 @@
+"use client";
+
+import { useEffect, useRef, useState, useCallback } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { getAnalytics, type AnalyticsResponse, type ViewedItemRanked } from "@/lib/api";
+
+type Period = "24h" | "7d" | "30d" | "all";
+
+const PERIOD_LABELS: Record<Period, string> = {
+  "24h": "24h",
+  "7d": "7gg",
+  "30d": "30gg",
+  "all": "Tutto",
+};
+
+function MovementBadge({ status, delta }: { status: ViewedItemRanked['status']; delta: number | null }) {
+  if (status === 'new') {
+    return <span className="text-xs text-[#cc9166] font-medium ml-1">Nuovo</span>;
+  }
+  if (status === 'up') {
+    return <span className="text-xs text-green-600 font-medium ml-1">&uarr;{delta}</span>;
+  }
+  if (status === 'down') {
+    return <span className="text-xs text-red-500 font-medium ml-1">&darr;{Math.abs(delta!)}</span>;
+  }
+  return <span className="text-xs text-gray-400 ml-1">=</span>;
+}
+
+function DailyTrendChart({ data }: { data: { date: string; viewCount: number }[] }) {
+  if (data.length === 0) return null;
+  const max = Math.max(...data.map((d) => d.viewCount), 1);
+  const total = data.reduce((s, d) => s + d.viewCount, 0);
+  const W = 100;
+  const H = 32;
+  const barWidth = W / data.length;
+  return (
+    <div className="mb-3">
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-xs font-medium text-gray-500">Andamento ({data.length}gg)</span>
+        <span className="text-xs text-gray-400">{total} vis. totali</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-12 block">
+        {data.map((d, i) => {
+          const h = (d.viewCount / max) * (H - 4);
+          const x = i * barWidth + barWidth * 0.1;
+          const y = H - h;
+          return (
+            <rect
+              key={d.date}
+              x={x}
+              y={y}
+              width={barWidth * 0.8}
+              height={Math.max(h, 0.5)}
+              fill="#cc9166"
+              rx={0.4}
+            >
+              <title>{`${d.date}: ${d.viewCount} vis.`}</title>
+            </rect>
+          );
+        })}
+      </svg>
+      <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+        <span>{data[0].date.slice(5)}</span>
+        <span>{data[data.length - 1].date.slice(5)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ViewedItemThumbnail({ item }: { item: ViewedItemRanked }) {
+  if (!item.image) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-lg flex-shrink-0">
+        🍽️
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+      <Image
+        src={item.image}
+        alt={item.name}
+        fill
+        className="object-cover"
+        sizes="48px"
+        unoptimized
+      />
+    </div>
+  );
+}
+
+export default function AnalyticsPage() {
+  const [period, setPeriod] = useState<Period>("7d");
+  const [data, setData] = useState<AnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [heroLoading, setHeroLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [limit, setLimit] = useState(10);
+
+  const load = useCallback(
+    async (p: Period, lim: number, isInitial = false) => {
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setHeroLoading(true);
+      }
+      setError(null);
+      try {
+        const result = await getAnalytics(p, lim);
+        setData(result);
+      } catch {
+        if (isInitial) {
+          setError("Errore caricamento. Riprova");
+        } else {
+          // Silent retry once, then show inline error
+          try {
+            const retry = await getAnalytics(p, lim);
+            setData(retry);
+          } catch {
+            setError("Errore caricamento. Riprova");
+          }
+        }
+      } finally {
+        setLoading(false);
+        setHeroLoading(false);
+      }
+    },
+    [],
+  );
+
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    load(period, limit, isFirstLoad.current);
+    isFirstLoad.current = false;
+  }, [load, period, limit]);
+
+  const handlePeriodChange = (p: Period) => {
+    if (p !== period) {
+      setPeriod(p);
+      setLimit(10);
+    }
+  };
+
+  const itemEditorHref = (item: ViewedItemRanked) =>
+    item.entryId && item.categoryId
+      ? `/admin?s=entries&category=${item.categoryId}&entry=${item.entryId}&entryName=${encodeURIComponent(item.name)}`
+      : null;
+
+  // ── Loading skeleton ──────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="p-4 space-y-4">
+        {/* Hero skeleton */}
+        <div className="flex gap-4">
+          <div className="flex-1 bg-white rounded-lg shadow p-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3 mb-3 animate-pulse" />
+            <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse" />
+          </div>
+          <div className="flex-1 bg-white rounded-lg shadow p-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3 mb-3 animate-pulse" />
+            <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse" />
+          </div>
+        </div>
+        <div className="text-sm text-gray-400 text-center">Caricamento...</div>
+      </div>
+    );
+  }
+
+  // ── Error (initial load only) ─────────────────────────────────────
+  if (error && !data) {
+    return (
+      <div className="p-4">
+        <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
+          {error}
+          <div className="mt-2">
+            <button
+              onClick={() => load(period, limit, true)}
+              className="text-sm text-[#b07040] hover:underline"
+            >
+              Riprova
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-4" style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+      {/* DATE RANGE SELECTOR */}
+      <div className="flex gap-1" role="group" aria-label="Periodo">
+        {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+          <button
+            key={p}
+            onClick={() => handlePeriodChange(p)}
+            className={`flex-1 py-3 text-sm font-medium rounded-lg min-h-[44px] transition-colors ${
+              period === p
+                ? "bg-[#cc9166] text-white"
+                : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+            }`}
+            aria-pressed={period === p}
+          >
+            {PERIOD_LABELS[p]}
+          </button>
+        ))}
+      </div>
+
+      {/* Error inline (after period change) */}
+      {error && data && (
+        <div className="text-sm text-red-500 text-center">
+          {error}{" "}
+          <button
+            onClick={() => load(period, limit, false)}
+            className="underline"
+          >
+            Riprova
+          </button>
+        </div>
+      )}
+
+      {/* PIATTI PIÙ VISTI */}
+      <div
+        className="bg-white rounded-lg shadow p-4"
+        role="region"
+        aria-label="Piatti più visti"
+      >
+        <p className="text-sm font-semibold text-gray-900 mb-3">Piatti più visti</p>
+        {data?.dailyTotals && data.dailyTotals.length > 0 && (
+          <DailyTrendChart data={data.dailyTotals} />
+        )}
+        {heroLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-4 bg-gray-200 rounded w-full animate-pulse" />
+            ))}
+          </div>
+        ) : !data || data.viewedItems.length === 0 ? (
+          <p className="text-sm text-gray-400">Nessun dato di visualizzazione ancora</p>
+        ) : (
+          <>
+            <ol className="divide-y divide-gray-100">
+              {data.viewedItems.map((item, idx) => {
+                const href = itemEditorHref(item);
+                const content = (
+                  <>
+                    <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm text-gray-400 w-5 flex-shrink-0 text-right">{idx + 1}.</span>
+                    <ViewedItemThumbnail item={item} />
+                    <div className="min-w-0">
+                      <div className="text-sm text-gray-900 flex items-center flex-wrap gap-x-1">
+                        <span className="truncate">{item.name}</span>
+                        {period !== 'all' && <MovementBadge status={item.status} delta={item.delta} />}
+                      </div>
+                      {item.categoryName && (
+                        <div className="text-xs text-gray-400 truncate mt-0.5">
+                          {item.categoryName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                    <span className="text-sm text-gray-500 shrink-0 ml-2">{item.viewCount} vis.</span>
+                  </>
+                );
+
+                return (
+                  <li key={item.entryId ?? idx}>
+                    {href ? (
+                      <Link
+                        href={href}
+                        className="w-full flex items-center justify-between gap-3 py-2 min-h-[60px] text-left rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div className="w-full flex items-center justify-between gap-3 py-2 min-h-[60px] text-left rounded-lg">
+                        {content}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+            {data && data.viewedItems.length >= limit && limit < 100 && (
+              <button
+                onClick={() => setLimit((prev) => (prev < 50 ? 50 : 100))}
+                disabled={heroLoading}
+                className="mt-3 w-full py-2 text-sm font-medium text-[#b07040] hover:bg-[#fbf3ec] rounded-lg transition-colors disabled:opacity-50"
+              >
+                {heroLoading ? "Caricamento..." : "Vedi altro"}
+              </button>
+            )}
+            {period !== 'all' && (
+              <p className="text-xs text-gray-400 mt-3">
+                Le visualizzazioni sono conteggi anonimi. Il movimento indica il cambio di posizione rispetto al periodo precedente.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+    </div>
+  );
+}

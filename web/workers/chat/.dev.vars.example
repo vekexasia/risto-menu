@@ -1,0 +1,16 @@
+# Copy to `.dev.vars` (gitignored). Wrangler loads these for `wrangler dev`.
+# For production, use `wrangler secret put <NAME>`.
+
+# Required when LLM_PROVIDER=openai (the default).
+OPENAI_API_KEY=
+
+# Optional: only needed if you switch the chat worker to Anthropic.
+# ANTHROPIC_API_KEY=
+
+# Required: HMAC secret for signed anonymous diner-chat session tokens.
+# Generate with: openssl rand -hex 32
+CHAT_SESSION_SECRET=
+
+# Required for the /refresh-menu and /chat/debug endpoints (admin-only).
+# Generate with: openssl rand -hex 32
+REFRESH_SECRET=

@@ -1,0 +1,75 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.history
+.svn/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+#.vscode/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+.open-next/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Wrangler configs hold per-deployment IDs (D1 db, KV namespace) and should not be
+# committed. Each clone copies the .example file and fills in their own values.
+backend/wrangler.toml
+web/workers/chat/wrangler.toml
+
+# Build outputs
+build/
+dist/
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Cloudflare
+.wrangler/
+
+# Auto Claude data directory
+.auto-claude/
+
+# Auto Claude generated files
+.auto-claude-security.json
+.auto-claude-status
+.claude_settings.json
+.worktrees/
+.security-key
+logs/security/
+.gstack/
+
+# Local Firestore backup dumps (may contain real customer data)
+backend/backups/
+
+# Local/generated SQL dumps (may contain real customer data)
+backend/tmp-import.sql
+backend/*.sql
+
+# Local exports / runtime data
+backend/exports/

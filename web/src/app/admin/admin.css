@@ -1,0 +1,42 @@
+/* Admin design tokens */
+:root {
+  --adm-dark: #1F1A14;
+  --adm-accent: #C47A4F;
+  --adm-accent-deep: #A15E35;
+  --adm-accent-light: #F4E2D4;
+  --adm-surface: #FBFAF9;
+  --adm-border: #E7E5E4;
+  --adm-ok: #1F8E5A;
+  --adm-ok-bg: #E6F4EC;
+  --adm-off: #9A9590;
+  --adm-off-bg: #F0EEEA;
+  --adm-muted: #888;
+}
+
+/* Responsive sidebar/rail */
+@media (max-width: 900px) {
+  .adm-sidebar { display: none !important; }
+  .adm-rail { display: none !important; }
+}
+@media (min-width: 901px) and (max-width: 1200px) {
+  .adm-rail { display: none !important; }
+}
+
+/* Table rows hover */
+.adm-row:hover { background: #F4F2EE !important; }
+
+/* Input focus */
+.adm-input:focus { border-color: var(--adm-accent) !important; outline: none; }
+.adm-textarea:focus { border-color: var(--adm-accent) !important; outline: none; }
+
+/* Scrollbar */
+.adm-scroll::-webkit-scrollbar { width: 5px; }
+.adm-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 3px; }
+
+/* Pill utilities */
+.adm-pill-ok { background: var(--adm-ok-bg); color: var(--adm-ok); }
+.adm-pill-off { background: var(--adm-off-bg); color: var(--adm-off); }
+.adm-pill-accent { background: var(--adm-accent-light); color: var(--adm-accent-deep); }
+
+/* Reset body defaults for admin */
+.adm-root { height: 100vh; overflow: hidden; }

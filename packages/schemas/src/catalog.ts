@@ -1,0 +1,86 @@
+import { z } from 'zod';
+import { I18nMapSchema } from './common.js';
+import { RestaurantThemeSchema, RestaurantInfoSchema, RestaurantSocialsSchema, OpeningScheduleSchema } from './restaurant.js';
+import { VariantSelectionSchema, ExtraOptionSchema } from './menu.js';
+
+export const CatalogEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  price: z.number(),
+  priceUnit: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  outOfStock: z.boolean(),
+  frozen: z.boolean(),
+  sortOrder: z.number(),
+  visibility: z.string(),
+  allergens: z.array(z.string()).nullable(),
+  i18n: I18nMapSchema.nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+});
+export type CatalogEntry = z.infer<typeof CatalogEntrySchema>;
+
+export const CatalogCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  sortOrder: z.number(),
+  i18n: I18nMapSchema.nullable(),
+  entries: z.array(CatalogEntrySchema),
+});
+export type CatalogCategory = z.infer<typeof CatalogCategorySchema>;
+
+export const CatalogMenuSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  title: z.string(),
+  i18n: I18nMapSchema.nullable(),
+  categories: z.array(CatalogCategorySchema),
+});
+export type CatalogMenu = z.infer<typeof CatalogMenuSchema>;
+
+export const CatalogVariantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  sortOrder: z.number(),
+  selections: z.array(VariantSelectionSchema).nullable(),
+  i18n: I18nMapSchema.nullable(),
+});
+export type CatalogVariant = z.infer<typeof CatalogVariantSchema>;
+
+export const CatalogExtraSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  max: z.number(),
+  options: z.array(ExtraOptionSchema).nullable(),
+  i18n: I18nMapSchema.nullable(),
+});
+export type CatalogExtra = z.infer<typeof CatalogExtraSchema>;
+
+export const CatalogRestaurantSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  payoff: z.string().nullable(),
+  theme: RestaurantThemeSchema.nullable(),
+  info: RestaurantInfoSchema.nullable(),
+  socials: RestaurantSocialsSchema.nullable(),
+  openingSchedule: OpeningScheduleSchema.nullable(),
+  features: z.object({
+    aiChat: z.boolean(),
+    enabledLocales: z.array(z.string()).nullable().optional(),
+    disabledLocales: z.array(z.string()).nullable().optional(),
+    customLocales: z.array(z.object({ code: z.string(), name: z.string() })).nullable().optional(),
+  }).optional(),
+});
+export type CatalogRestaurant = z.infer<typeof CatalogRestaurantSchema>;
+
+export const CatalogResponseSchema = z.object({
+  restaurant: CatalogRestaurantSchema,
+  menus: z.array(CatalogMenuSchema),
+  variants: z.array(CatalogVariantSchema),
+  extras: z.array(CatalogExtraSchema),
+  generatedAt: z.string(),
+});
+export type CatalogResponse = z.infer<typeof CatalogResponseSchema>;
