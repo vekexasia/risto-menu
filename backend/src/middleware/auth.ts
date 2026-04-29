@@ -2,8 +2,9 @@ import { createMiddleware } from 'hono/factory';
 import type { Env, RuntimeConfig } from '../types';
 
 export interface AuthUser {
+  /** Stable identifier for the authenticated user — for Cloudflare Access this is the email. */
   uid: string;
-  email?: string;
+  email: string;
   name?: string;
   claims: Record<string, unknown>;
 }
@@ -23,26 +24,12 @@ let jwksCache: Map<string, CryptoKey> = new Map();
 let jwksCacheIssuer: string | null = null;
 
 async function fetchJwks(issuer: string): Promise<Map<string, CryptoKey>> {
-  // Try .well-known/openid-configuration first
-  const configUrl = issuer.replace(/\/$/, '') + '/.well-known/openid-configuration';
-  let jwksUri: string;
+  // Cloudflare Access serves its public keys at /cdn-cgi/access/certs.
+  const certsUrl = issuer.replace(/\/$/, '') + '/cdn-cgi/access/certs';
 
-  try {
-    const configResp = await fetch(configUrl);
-    if (configResp.ok) {
-      const config = (await configResp.json()) as { jwks_uri?: string };
-      jwksUri = config.jwks_uri!;
-    } else {
-      // Fallback for Firebase Auth and similar
-      jwksUri = issuer.replace(/\/$/, '') + '/.well-known/jwks.json';
-    }
-  } catch {
-    jwksUri = issuer.replace(/\/$/, '') + '/.well-known/jwks.json';
-  }
-
-  const resp = await fetch(jwksUri);
+  const resp = await fetch(certsUrl);
   if (!resp.ok) {
-    throw new Error(`Failed to fetch JWKS from ${jwksUri}: ${resp.status}`);
+    throw new Error(`Failed to fetch JWKS from ${certsUrl}: ${resp.status}`);
   }
 
   const jwks = (await resp.json()) as { keys: (JsonWebKey & { kid?: string })[] };
@@ -64,12 +51,10 @@ async function fetchJwks(issuer: string): Promise<Map<string, CryptoKey>> {
 }
 
 async function getSigningKey(issuer: string, kid: string): Promise<CryptoKey> {
-  // Return cached key if available
   if (jwksCacheIssuer === issuer && jwksCache.has(kid)) {
     return jwksCache.get(kid)!;
   }
 
-  // Refresh cache
   jwksCache = await fetchJwks(issuer);
   jwksCacheIssuer = issuer;
 
@@ -121,7 +106,6 @@ async function verifyJwt(
 
   const [headerB64, payloadB64, signatureB64] = parts;
 
-  // Decode header
   const header: JwtHeader = JSON.parse(new TextDecoder().decode(base64UrlDecode(headerB64)));
   if (header.alg !== 'RS256') {
     throw new Error(`Unsupported algorithm: ${header.alg}`);
@@ -130,7 +114,6 @@ async function verifyJwt(
     throw new Error('JWT missing kid header');
   }
 
-  // Verify signature
   const signingKey = await getSigningKey(issuer, header.kid);
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
   const signature = base64UrlDecode(signatureB64);
@@ -140,15 +123,12 @@ async function verifyJwt(
     throw new Error('Invalid JWT signature');
   }
 
-  // Decode and validate payload
   const payload: JwtPayload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64)));
 
-  // Require sub claim
-  if (!payload.sub) {
-    throw new Error('JWT missing sub claim');
+  if (!payload.email) {
+    throw new Error('JWT missing email claim');
   }
 
-  // Require exp claim and check expiration
   const now = Math.floor(Date.now() / 1000);
   if (!payload.exp) {
     throw new Error('JWT missing exp claim');
@@ -157,17 +137,14 @@ async function verifyJwt(
     throw new Error('JWT expired');
   }
 
-  // Check nbf (not before) if present
   if (payload.nbf && payload.nbf > now) {
     throw new Error('JWT not yet valid (nbf)');
   }
 
-  // Check issuer
   if (payload.iss !== issuer) {
     throw new Error(`Invalid issuer: ${payload.iss}`);
   }
 
-  // Check audience
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
   if (!aud.includes(audience)) {
     throw new Error(`Invalid audience: ${payload.aud}`);
@@ -177,7 +154,13 @@ async function verifyJwt(
 }
 
 /**
- * Auth middleware: requires a valid JWT Bearer token.
+ * Auth middleware: requires a valid Cloudflare Access JWT.
+ *
+ * Cloudflare Access sits in front of the worker and adds the
+ * `Cf-Access-Jwt-Assertion` header on every authenticated request. We verify
+ * the signature against the team's public keys and use the `email` claim as
+ * the stable user identifier.
+ *
  * Sets `c.get('user')` with the authenticated user info.
  */
 export const requireAuth = createMiddleware<AuthBindings>(async (c, next) => {
@@ -187,19 +170,18 @@ export const requireAuth = createMiddleware<AuthBindings>(async (c, next) => {
     return c.json({ error: 'Auth not configured on this backend instance' }, 503);
   }
 
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ error: 'Missing or invalid Authorization header' }, 401);
+  const token = c.req.header('Cf-Access-Jwt-Assertion');
+  if (!token) {
+    return c.json({ error: 'Missing Cf-Access-Jwt-Assertion header' }, 401);
   }
-
-  const token = authHeader.slice(7);
 
   try {
     const payload = await verifyJwt(token, config.auth.issuer!, config.auth.audience!);
 
+    const email = payload.email as string;
     const user: AuthUser = {
-      uid: payload.sub!,
-      email: payload.email as string | undefined,
+      uid: email,
+      email,
       name: payload.name as string | undefined,
       claims: payload,
     };
@@ -210,30 +192,4 @@ export const requireAuth = createMiddleware<AuthBindings>(async (c, next) => {
     const message = err instanceof Error ? err.message : 'Authentication failed';
     return c.json({ error: 'Unauthorized', message }, 401);
   }
-});
-
-/**
- * Optional auth middleware: parses JWT if present, but doesn't require it.
- * Sets `c.get('user')` if token is valid, undefined otherwise.
- */
-export const optionalAuth = createMiddleware<AuthBindings>(async (c, next) => {
-  const config = c.get('config');
-  const authHeader = c.req.header('Authorization');
-
-  if (config.auth.configured && authHeader?.startsWith('Bearer ')) {
-    try {
-      const token = authHeader.slice(7);
-      const payload = await verifyJwt(token, config.auth.issuer!, config.auth.audience!);
-      c.set('user', {
-        uid: payload.sub!,
-        email: payload.email as string | undefined,
-        name: payload.name as string | undefined,
-        claims: payload,
-      });
-    } catch {
-      // Token invalid — proceed without user
-    }
-  }
-
-  await next();
 });

@@ -8,12 +8,12 @@ const ADMIN_UID = 'admin-1';
 
 async function adminEnv(db = createTestDb()) {
   seedSettings(db);
-  const env = makeDbEnv(db, { ADMIN_UIDS: ADMIN_UID });
+  const env = makeDbEnv(db, { ADMIN_EMAILS: ADMIN_UID });
   const token = await signTestJwt(ADMIN_UID);
   return {
     db,
     env,
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { 'Cf-Access-Jwt-Assertion': token },
   };
 }
 

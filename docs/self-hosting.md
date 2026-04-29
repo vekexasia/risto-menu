@@ -1,8 +1,7 @@
 # Self-hosting Risto Menu
 
-This guide walks through deploying your own copy on Cloudflare + Firebase.
-Everything here is free-tier-friendly; you only pay if traffic or AI chat
-usage grows.
+This guide walks through deploying your own copy on Cloudflare. Everything
+here is free-tier-friendly; you only pay if traffic or AI chat usage grows.
 
 **Single-tenant model.** This deployment serves one restaurant. To run a
 second restaurant, repeat this setup with a different Pages project name,
@@ -19,7 +18,7 @@ fresh D1 database, fresh KV namespace, and fresh worker names.
 | Cloudflare D1 | SQLite database (settings, menus, entries, analytics) | Yes (5 GB) |
 | Cloudflare R2 | Image uploads + catalog snapshot cache | Yes (10 GB) |
 | Cloudflare KV | Chat menu cache | Yes |
-| Firebase Auth | Admin login (Google, email/password, phone) | Yes |
+| Cloudflare Access | Admin login (Google / GitHub / email OTP / SAML / OIDC) | Yes (≤50 users) |
 | OpenAI API | Diner chat + admin translation helper | **Paid** (optional) |
 
 **Heads up:** the AI chat is optional. If you do not set
@@ -39,10 +38,9 @@ npm i -g wrangler   # optional; the local devDep is also fine
 
 You'll also need:
 
-- A Cloudflare account (free).
-- A Firebase project (free Spark tier). Enable **Authentication** with the
-  sign-in methods you want.
-- Your own Firebase UID (you'll list it in `ADMIN_UIDS`).
+- A Cloudflare account (free) with **Zero Trust** enabled (free up to 50 users).
+- An admin email address (you'll list it in `ADMIN_EMAILS`). Cloudflare Access
+  will accept it via Google / email OTP / GitHub / your IdP of choice.
 - (Optional) An OpenAI API key with a small monthly cap.
 
 ---
@@ -106,26 +104,42 @@ Edit each `wrangler.toml` and fill in:
 - `id` under `[[kv_namespaces]]` (KV, chat worker only)
 - `R2_PUBLIC_URL` if using R2 (backend only)
 - `ALLOWED_ORIGINS` (the URLs your frontend will run on; both backend and chat worker)
-- `ALLOWED_HOST_SUFFIXES` (Pages preview deploys, e.g. `.menu.pages.dev`; chat worker only)
-- `AUTH_ISSUER` / `AUTH_AUDIENCE` (your Firebase project id — see step 4)
-- `ADMIN_UIDS` — comma-separated list of Firebase UIDs allowed to access `/admin/*` (backend only)
+- `ALLOWED_HOST_SUFFIXES` (Pages preview deploys, e.g. `.menu.pages.dev`)
+- `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` (Cloudflare Access — see step 4; backend only)
+- `ADMIN_EMAILS` — comma-separated list of admin emails allowed to access `/admin/*` (backend only)
 
 ---
 
-## 4. Firebase project
+## 4. Cloudflare Access
 
-1. Create a project at <https://console.firebase.google.com/>.
-2. **Build → Authentication → Get started**. Enable the sign-in methods you want.
-3. **Project settings → General → Your apps → Web app**. Register a web app
-   and copy the SDK config — you'll paste it into `web/.env.local`.
-4. Note your **Project ID**. You'll use it in two places:
-   - `AUTH_ISSUER=https://securetoken.google.com/<your-project-id>`
-   - `AUTH_AUDIENCE=<your-project-id>`
-5. Sign in once via the running app, then grab your **Firebase UID** from
-   the Firebase Auth console and put it in `ADMIN_UIDS`.
+Admin auth is handled by Cloudflare Access — no Firebase, no password. Access
+sits in front of `/admin/*` and the backend Worker, redirects unauthenticated
+visitors to a Cloudflare-hosted login page (Google, GitHub, email OTP, SAML,
+OIDC — your choice), and forwards authenticated requests with a verifiable
+`Cf-Access-Jwt-Assertion` header.
 
-The backend verifies admin JWTs against the public JWKS — no Firebase
-service-account JSON is needed.
+In **Cloudflare dashboard → Zero Trust → Settings**, set your team domain
+(e.g. `yourteam.cloudflareaccess.com`) if you haven't already. The free tier
+covers up to 50 users — way more than enough for a single restaurant admin.
+
+Then create two Access applications under **Zero Trust → Access → Applications**:
+
+1. **Pages frontend** — Application type "Self-hosted", domain
+   `your-pages-project.pages.dev` (or your custom domain), path
+   `/admin/*`. Add an Access policy: e.g. "Emails ending with @yourcompany.com"
+   or "Emails in: you@example.com, partner@example.com".
+2. **Backend Worker** — Application type "Self-hosted", domain
+   `<your-backend-worker>.workers.dev` (or custom domain), path `/admin/*`.
+   Same policy as above.
+
+Each app's **Overview** tab shows an `AUD` tag (a hex string). Copy it into:
+- `backend/wrangler.toml` → `ACCESS_AUD`
+- Set `ACCESS_TEAM_DOMAIN = https://<your-team>.cloudflareaccess.com` in the same file
+
+Add the admin email(s) to `backend/wrangler.toml` → `ADMIN_EMAILS`.
+
+The backend verifies the JWT against `<team-domain>/cdn-cgi/access/certs` —
+fully self-contained, no service accounts.
 
 ---
 
@@ -135,11 +149,14 @@ service-account JSON is needed.
 cp web/.env.local.example web/.env.local
 ```
 
-Fill in `NEXT_PUBLIC_FIREBASE_*` from the Firebase web app config, plus:
+Fill in:
 
 - `NEXT_PUBLIC_API_URL` — your backend Worker URL (or `http://localhost:8787` for dev)
 - `NEXT_PUBLIC_CHAT_WORKER_URL` — your chat Worker URL (or `http://localhost:8788`)
 - `NEXT_PUBLIC_DEFAULT_LOCALE` — default UI language (`en`, `it`, `de`, …)
+
+The frontend has no auth env vars — Cloudflare Access manages the login flow
+entirely.
 
 ---
 
@@ -199,8 +216,12 @@ cd web/workers/chat && npm run dev # → http://localhost:8788
 cd web && npm run dev              # → http://localhost:3000
 ```
 
-Open <http://localhost:3000/admin>, log in with Firebase, and start
-editing categories, entries, hours, and settings.
+Open <http://localhost:3000/admin>. In local dev, Cloudflare Access isn't
+in the loop — `requireAuth` returns 503 because `ACCESS_TEAM_DOMAIN` /
+`ACCESS_AUD` aren't set. To bypass during dev, either point at the deployed
+backend (`NEXT_PUBLIC_API_URL` in `.env.local`) or use the Playwright admin
+bypass that injects a fake user into `window.__playwright_admin__` (see
+`web/src/app/admin/AdminContent.tsx`).
 
 ---
 
@@ -233,6 +254,8 @@ Point your domain at the Pages project:
 3. In `web/.env.production.local`, set `NEXT_PUBLIC_API_URL` and
    `NEXT_PUBLIC_CHAT_WORKER_URL` to your worker URLs and re-build / re-deploy
    the frontend.
+4. Update the Cloudflare Access apps (Zero Trust → Access) to cover the new
+   custom domain too — add it to the application's hostnames list.
 
 That's it. There is no per-restaurant domain mapping table — the deployment
 **is** your restaurant.
@@ -251,8 +274,11 @@ That's it. There is no per-restaurant domain mapping table — the deployment
 ## Troubleshooting
 
 - **`wrangler.toml not found`** — copy from `wrangler.toml.example`.
-- **403 on `/admin`** — your Firebase UID isn't in `ADMIN_UIDS` on the backend
+- **403 on `/admin`** — your email isn't in `ADMIN_EMAILS` on the backend
   worker. Add it and `npx wrangler deploy`.
+- **401 / 503 on `/admin`** — Cloudflare Access isn't in front of the route, or
+  `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` aren't set on the backend Worker. Re-check
+  the Access app config in Zero Trust and the wrangler vars.
 - **CORS errors** — your frontend origin isn't in `ALLOWED_ORIGINS`. Update
   both backend and chat worker `wrangler.toml`, redeploy, and double-check
   Pages build-time env vars match what the workers know about.

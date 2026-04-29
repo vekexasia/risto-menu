@@ -5,8 +5,8 @@ const DEFAULT_ENV: Env = {
   APP_ENV: 'development',
   API_VERSION: 'v1',
   SERVICE_NAME: 'risto-test',
-  AUTH_ISSUER: 'https://auth.example.com',
-  AUTH_AUDIENCE: 'risto-test',
+  ACCESS_TEAM_DOMAIN: 'https://auth.example.com',
+  ACCESS_AUD: 'risto-test',
 };
 
 interface TestRequestOptions {
@@ -18,7 +18,7 @@ interface TestRequestOptions {
 
 /**
  * Returns a complete Env merged with the defaults. Tests pass overrides to
- * inject D1, ADMIN_UIDS, etc.
+ * inject D1, ADMIN_EMAILS, etc.
  */
 export function makeEnv(overrides: Partial<Env> = {}): Env {
   return { ...DEFAULT_ENV, ...overrides };

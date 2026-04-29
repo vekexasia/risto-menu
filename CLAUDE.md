@@ -34,6 +34,12 @@ cd backend && npm run deploy             # wrangler deploy
 cd backend && npm run test:run
 cd backend && npx wrangler d1 migrations apply menu-db --remote
 
+# Chat worker
+cd web/workers/chat && npm install
+cd web/workers/chat && npm run dev
+cd web/workers/chat && npm run deploy
+cd web/workers/chat && npm run test:run
+
 # Import a restaurant from a legacy backup JSON
 cd backend && npm run import:backup -- --file backups/<file>.json
 ```
@@ -43,16 +49,20 @@ cd backend && npm run import:backup -- --file backups/<file>.json
 ### React App (web/)
 - **Next.js 16** with App Router and Turbopack
 - **src/app/**: Routes using App Router
-  - `[locale]/`: Localized pages (it, en, de)
-  - `admin/`: Restaurant management panel
+  - `/`: Locale-detect redirect to `/{defaultLocale}/menu`
+  - `[locale]/`: Localized pages — `it, en, de, fr, es, nl, ru, pt, vec` (9 locales). Default via `NEXT_PUBLIC_DEFAULT_LOCALE`.
+  - `[locale]/menu/`: Public diner menu (the only menu route)
+  - `[locale]/info/`: Restaurant info page
+  - `admin/[[...segments]]/`: Single admin SPA, sub-pages selected via `?s=` query param
 - **src/components/**: Reusable UI components
-  - `home/`: Homepage components
-  - `menu/`: Menu display components
-  - `auth/`: Authentication components
-  - `ui/`: Generic UI elements
-- **src/lib/**: Utilities, Firebase Auth config, API client, types
-- **src/stores/**: State management
-- **src/hooks/**: Custom React hooks
+  - `admin/`: Admin panel pages + shared admin widgets
+  - `chat/`: AI chat panel + message rendering
+  - `home/`: Homepage card components
+  - `menu/`: Menu display components (item detail, info modal, promotion popup)
+  - `ui/`: Generic UI elements (e.g. `LanguagePicker`)
+- **src/lib/**: API client, content-presentation, types, utils
+- **src/stores/**: State management (Zustand): `restaurantStore`, `chatStore`, `chatActionsStore`, `menuSelectionStore`, `uiStore`
+- **src/hooks/**: Custom React hooks (`useStreamingChat`, `useBackButtonClose`)
 
 ### Cloudflare Worker Backend (backend/)
 Hono app serving the REST API. Drizzle ORM over Cloudflare D1 (SQLite).
@@ -62,7 +72,8 @@ Route groups:
 - `/catalog/publish` — admin-only, regenerates the R2 snapshot
 - `/me` — authenticated user profile + `isAdmin` flag
 - `/admin/...` — admin CRUD for settings, categories, entries, hours, analytics, translations.
-  Gated by `requireAdmin` middleware which checks the user's Firebase uid against `ADMIN_UIDS` env.
+  Gated by `requireAdmin` middleware which checks the user's email (from the
+  Cloudflare Access JWT's `email` claim) against `ADMIN_EMAILS` env.
 
 ### Chat Worker (web/workers/chat/)
 Separate Cloudflare Worker for the AI chat assistant. SSE streaming. Tool calls
@@ -75,16 +86,22 @@ Tables: `settings` (singleton, `id = 1`), `menus`, `menu_categories`,
 `restaurant_memberships`, no `restaurant_domains` — single-tenant deploys
 don't need them. Prices are stored as integer cents. i18n blobs are JSON columns.
 
-### Firebase (auth only)
-Firebase Auth still issues JWTs for admin sessions. Diner chat uses Cloudflare
-Worker signed anonymous sessions. Firestore and Firebase Storage are no longer used by product code. Functions backend was deleted on
-2026-04-19 (it handled the removed orders/bookings/payments surface).
+### Cloudflare Access (admin auth)
+Cloudflare Access sits in front of `/admin/*` (Pages) and the backend Worker.
+The user logs in once via the Access-hosted page (Google, GitHub, email OTP,
+SAML — your IdP choice), CF sets a session cookie, and authenticated requests
+get a `Cf-Access-Jwt-Assertion` header. The backend verifies that JWT against
+the team's JWKS at `<team>/cdn-cgi/access/certs` and uses the `email` claim
+as the principal. No Firebase, no in-app login UI.
+
+Diner chat uses Cloudflare Worker signed anonymous sessions (HMAC tokens
+issued by the chat worker, gated by Cloudflare IP rate-limit).
 
 ## Key Patterns
 
 - Uses next-intl for internationalization
 - Tailwind CSS for styling
-- Firebase Auth for JWT issuance; backend verifies via JWKS
+- Cloudflare Access for admin login; backend verifies the Access JWT via JWKS
 - Cloudflare D1 for data, R2 for images, Pages for frontend
 
 ## Coding Guidelines
@@ -116,7 +133,7 @@ Test directories: `web/src/**/*.test.{ts,tsx}`, `web/e2e/*.spec.ts`, `backend/sr
 |---|---|---|---|
 | `web/src/` (frontend) | 60% | 80% | Unit + E2E combined |
 | `web/workers/chat/` | 50% | 70% | E2E covers happy paths |
-| `backend/src/` | 60% | 75% | Currently below baseline after the single-tenant collapse — rebuild route-level tests as needed. |
+| `backend/src/` | 60% | 75% | Route-level tests rebuilt 2026-04-29 (73 tests across 10 files). In-memory D1 helper at `src/__tests__/helpers/db.ts`. |
 
 Security boundary (`requireAdmin` middleware) must be 100% covered regardless.
 

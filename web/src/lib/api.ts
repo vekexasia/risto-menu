@@ -3,8 +3,12 @@
  *
  * Environment variable: NEXT_PUBLIC_API_URL (defaults to localhost:8787 for dev).
  *
- * Firebase Auth issues admin JWTs; the backend verifies them and gates `/admin/*`
- * routes by ADMIN_UIDS (env var on the backend).
+ * Authentication is handled by Cloudflare Access in front of both the frontend
+ * and the backend worker. Requests against `/admin/*` ride along with the
+ * `Cf-Access-Jwt-Assertion` header that Access adds; the backend verifies it.
+ * `auth: true` on a fetch is now just a marker that this route requires Access
+ * — the underlying request always sends `credentials: 'include'` so the
+ * Access cookie travels cross-origin.
  */
 
 import type {
@@ -26,19 +30,6 @@ export type { CatalogResponse, MeResponse, AnalyticsResponse, ViewedItemRanked }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-/** Get the current user's ID token from Firebase Auth (bridge during migration) */
-async function getIdToken(): Promise<string | null> {
-  try {
-    const { getAuthInstance } = await import('./firebase');
-    const auth = getAuthInstance();
-    const user = auth.currentUser;
-    if (!user) return null;
-    return await user.getIdToken();
-  } catch {
-    return null;
-  }
-}
-
 interface FetchOptions {
   method?: string;
   body?: unknown;
@@ -49,18 +40,12 @@ interface FetchOptions {
 async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { method = 'GET', body, headers = {}, auth = false } = options;
 
-  if (auth) {
-    const token = await getIdToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
-
   const fetchOptions: RequestInit = {
     method,
-    headers: {
-      ...headers,
-    },
+    headers: { ...headers },
+    // Send cookies cross-origin so the Cloudflare Access session rides along
+    // for /admin/* routes. Public routes don't need it but it's harmless.
+    credentials: auth ? 'include' : 'same-origin',
   };
 
   if (body !== undefined) {
@@ -112,7 +97,7 @@ export function getAdminCatalog() {
 
 /** Get the current user's profile + admin status. */
 export function getMe() {
-  return apiFetch<MeResponse>('/me', { auth: true });
+  return apiFetch<MeResponse>('/admin/me', { auth: true });
 }
 
 // ── Admin API ────────────────────────────────────────────────────────

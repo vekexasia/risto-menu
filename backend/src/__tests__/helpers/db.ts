@@ -223,8 +223,8 @@ export async function installJwksMock(): Promise<void> {
   await ensureKeyPair();
   if (_fetchMockInstalled) return;
 
-  const jwksUrl = `${TEST_ISSUER}/.well-known/jwks.json`;
-  const openidUrl = `${TEST_ISSUER}/.well-known/openid-configuration`;
+  // Cloudflare Access publishes its JWKS at /cdn-cgi/access/certs
+  const certsUrl = `${TEST_ISSUER}/cdn-cgi/access/certs`;
 
   const jwksBody = JSON.stringify({
     keys: [{ ..._publicJwk!, kid: TEST_KID, use: 'sig', alg: 'RS256' }],
@@ -232,13 +232,7 @@ export async function installJwksMock(): Promise<void> {
 
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString();
-    if (url === openidUrl) {
-      return new Response(JSON.stringify({ jwks_uri: jwksUrl }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    if (url === jwksUrl) {
+    if (url === certsUrl) {
       return new Response(jwksBody, {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -262,13 +256,18 @@ function strToB64url(s: string): string {
 }
 
 /**
- * Sign and return a valid RS256 Bearer token string accepted by requireAuth.
+ * Sign and return a valid RS256 token accepted by requireAuth.
+ *
+ * The first argument is treated as the user's email (the stable identifier
+ * Cloudflare Access provides). It's set as both `email` and `sub` claims so
+ * the JWT looks like what CF Access actually issues.
  */
-export async function signTestJwt(uid: string, extra: Record<string, unknown> = {}): Promise<string> {
+export async function signTestJwt(email: string, extra: Record<string, unknown> = {}): Promise<string> {
   await ensureKeyPair();
   const header = { alg: 'RS256', kid: TEST_KID, typ: 'JWT' };
   const payload = {
-    sub: uid,
+    sub: email,
+    email,
     iss: TEST_ISSUER,
     aud: TEST_AUDIENCE,
     iat: Math.floor(Date.now() / 1000),
@@ -298,8 +297,8 @@ export async function signTestJwt(uid: string, extra: Record<string, unknown> = 
 export function makeDbEnv(db: TestDb, overrides: Partial<Env> = {}): Env {
   return makeEnv({
     DB: db.d1,
-    AUTH_ISSUER: TEST_ISSUER,
-    AUTH_AUDIENCE: TEST_AUDIENCE,
+    ACCESS_TEAM_DOMAIN: TEST_ISSUER,
+    ACCESS_AUD: TEST_AUDIENCE,
     ...overrides,
   });
 }

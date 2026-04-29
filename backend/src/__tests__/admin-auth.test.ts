@@ -17,48 +17,48 @@ describe('requireAdmin middleware', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 403 when ADMIN_UIDS is unset', async () => {
+  it('returns 403 when ADMIN_EMAILS is unset', async () => {
     const db = createTestDb();
     seedSettings(db);
     const token = await signTestJwt('any-uid');
     const res = await testRequest('/admin/settings', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Cf-Access-Jwt-Assertion': token },
       env: makeDbEnv(db),
     });
     expect(res.status).toBe(403);
     const body = await res.json() as Record<string, string>;
-    expect(body.message).toMatch(/ADMIN_UIDS/);
+    expect(body.message).toMatch(/ADMIN_EMAILS/);
   });
 
-  it('returns 403 when ADMIN_UIDS is set but does not include the caller', async () => {
+  it('returns 403 when ADMIN_EMAILS is set but does not include the caller', async () => {
     const db = createTestDb();
     seedSettings(db);
     const token = await signTestJwt('not-admin');
     const res = await testRequest('/admin/settings', {
-      headers: { Authorization: `Bearer ${token}` },
-      env: makeDbEnv(db, { ADMIN_UIDS: 'admin-1,admin-2' }),
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+      env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-1,admin-2' }),
     });
     expect(res.status).toBe(403);
   });
 
-  it('allows the request when caller uid is in ADMIN_UIDS', async () => {
+  it('allows the request when caller uid is in ADMIN_EMAILS', async () => {
     const db = createTestDb();
     seedSettings(db);
     const token = await signTestJwt('admin-1');
     const res = await testRequest('/admin/settings', {
-      headers: { Authorization: `Bearer ${token}` },
-      env: makeDbEnv(db, { ADMIN_UIDS: 'admin-1,admin-2' }),
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+      env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-1,admin-2' }),
     });
     expect(res.status).toBe(200);
   });
 
-  it('trims whitespace in ADMIN_UIDS list', async () => {
+  it('trims whitespace in ADMIN_EMAILS list', async () => {
     const db = createTestDb();
     seedSettings(db);
     const token = await signTestJwt('admin-1');
     const res = await testRequest('/admin/settings', {
-      headers: { Authorization: `Bearer ${token}` },
-      env: makeDbEnv(db, { ADMIN_UIDS: '  admin-1  ,  admin-2  ' }),
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+      env: makeDbEnv(db, { ADMIN_EMAILS: '  admin-1  ,  admin-2  ' }),
     });
     expect(res.status).toBe(200);
   });

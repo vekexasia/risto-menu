@@ -134,8 +134,8 @@ describe('POST /catalog/publish', () => {
     const token = await signTestJwt('not-admin');
     const res = await testRequest('/catalog/publish', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      env: makeDbEnv(db, { ADMIN_UIDS: 'admin-1' }),
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+      env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-1' }),
     });
     expect(res.status).toBe(403);
   });
@@ -149,8 +149,8 @@ describe('POST /catalog/publish', () => {
     const token = await signTestJwt('admin-1');
     const res = await testRequest('/catalog/publish', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      env: makeDbEnv(db, { ADMIN_UIDS: 'admin-1' }),
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+      env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-1' }),
     });
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, any>;

@@ -42,7 +42,10 @@ export function createApp() {
         return null;
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Authorization', 'Content-Type'],
+      allowHeaders: ['Content-Type', 'Cf-Access-Jwt-Assertion'],
+      // Required so the browser sends cookies / Access JWT on cross-origin
+      // /admin/* calls (frontend on Pages, backend on workers.dev).
+      credentials: true,
       maxAge: 86400,
     })(c, next);
   });
@@ -78,7 +81,7 @@ export function createApp() {
   });
 
   app.route('/', healthRoutes);
-  app.route('/me', meRoutes);
+  app.route('/admin/me', meRoutes);
   app.route('/catalog', catalogRoutes);
   app.route('/admin', adminRoutes);
 

@@ -30,7 +30,7 @@ a separate license (see [COMMERCIAL.md](COMMERCIAL.md)).
    cp web/workers/chat/.dev.vars.example web/workers/chat/.dev.vars
    ```
 4. Follow [docs/self-hosting.md](docs/self-hosting.md) to provision Cloudflare
-   resources (D1, KV, R2) and a Firebase project.
+   resources (D1, KV, R2) and Cloudflare Access apps.
 
 ## Workflow
 

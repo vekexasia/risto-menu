@@ -9,9 +9,9 @@ const ADMIN_UID = 'admin-1';
 async function adminEnv(extra: Record<string, string> = {}) {
   const db = createTestDb();
   seedSettings(db);
-  const env = makeDbEnv(db, { ADMIN_UIDS: ADMIN_UID, ...extra });
+  const env = makeDbEnv(db, { ADMIN_EMAILS: ADMIN_UID, ...extra });
   const token = await signTestJwt(ADMIN_UID);
-  return { db, env, headers: { Authorization: `Bearer ${token}` } };
+  return { db, env, headers: { 'Cf-Access-Jwt-Assertion': token } };
 }
 
 /**
@@ -48,9 +48,9 @@ describe('POST /admin/translate', () => {
     const token = await signTestJwt('not-admin');
     const res = await testRequest('/admin/translate', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Cf-Access-Jwt-Assertion': token },
       body: { sourceText: 'Pizza', targetLocale: 'en', field: 'name' },
-      env: makeDbEnv(db, { ADMIN_UIDS: 'someone-else' }),
+      env: makeDbEnv(db, { ADMIN_EMAILS: 'someone-else' }),
     });
     expect(res.status).toBe(403);
   });

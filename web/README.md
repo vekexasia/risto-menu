@@ -8,14 +8,14 @@ Next.js frontend for Risto Menu, deployed to Cloudflare Pages.
 - React 19
 - next-intl for localized public pages
 - Tailwind CSS
-- Firebase Auth for admin sessions
+- Cloudflare Access for admin sessions (no in-app login UI)
 - Cloudflare Worker API for catalog/admin data
 - Separate Cloudflare chat worker for the AI menu assistant
 
 ## Commands
 
 ```bash
-cd risto-web
+cd web
 npm install
 npm run dev          # local Next.js dev server
 npm run build        # production/static build
@@ -32,12 +32,11 @@ Common local `.env.local` values:
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8787
 NEXT_PUBLIC_CHAT_WORKER_URL=http://localhost:8788
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
+NEXT_PUBLIC_DEFAULT_LOCALE=en
 ```
+
+The frontend has no auth-related env vars — Cloudflare Access manages
+admin login.
 
 Production values are set in Cloudflare Pages or injected by `npm run build:cf`.
 See `../docs/secrets-and-env-vars.md`.

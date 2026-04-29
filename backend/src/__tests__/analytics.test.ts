@@ -13,9 +13,9 @@ async function adminEnv() {
   seedCategory(db, 'cat-1', 'menu-1');
   seedEntry(db, 'entry-1', 'cat-1', { name: 'A' });
   seedEntry(db, 'entry-2', 'cat-1', { name: 'B' });
-  const env = makeDbEnv(db, { ADMIN_UIDS: ADMIN_UID });
+  const env = makeDbEnv(db, { ADMIN_EMAILS: ADMIN_UID });
   const token = await signTestJwt(ADMIN_UID);
-  return { db, env, headers: { Authorization: `Bearer ${token}` } };
+  return { db, env, headers: { 'Cf-Access-Jwt-Assertion': token } };
 }
 
 function todayBucket(): number {
@@ -43,8 +43,8 @@ describe('GET /admin/analytics', () => {
     seedSettings(db);
     const token = await signTestJwt('not-admin');
     const res = await testRequest('/admin/analytics', {
-      headers: { Authorization: `Bearer ${token}` },
-      env: makeDbEnv(db, { ADMIN_UIDS: 'someone-else' }),
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+      env: makeDbEnv(db, { ADMIN_EMAILS: 'someone-else' }),
     });
     expect(res.status).toBe(403);
   });

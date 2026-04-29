@@ -26,7 +26,7 @@ describe('GET /health', () => {
 
   it('reports auth NOT configured when issuer missing', async () => {
     const res = await testRequest('/health', {
-      env: { AUTH_ISSUER: undefined, AUTH_AUDIENCE: undefined },
+      env: { ACCESS_TEAM_DOMAIN: undefined, ACCESS_AUD: undefined },
     });
     const body = await res.json() as Record<string, unknown>;
     expect(body.authConfigured).toBe(false);

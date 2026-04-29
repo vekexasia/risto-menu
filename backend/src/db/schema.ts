@@ -155,7 +155,7 @@ export const auditEvents = sqliteTable(
   'audit_events',
   {
     id: text('id').primaryKey(),
-    /** Firebase uid of the actor — free-form text, no FK. */
+    /** Email of the admin who took the action (from Cloudflare Access JWT) — free-form text, no FK. */
     actorUid: text('actor_uid'),
     action: text('action').notNull(),
     entityType: text('entity_type').notNull(),
@@ -203,7 +203,7 @@ export const catalogViews = sqliteTable(
 
 /**
  * One row per AI chat session.
- * uid is the Firebase uid (anonymous or real) — pseudonymous, enables erasure.
+ * uid is an anonymous diner session id (HMAC-derived in the chat worker) — pseudonymous, enables erasure.
  * messages stores the full conversation as JSON: [{role, content}, …].
  * tool_calls stores only the tool names used (no params) for analytics.
  */
@@ -211,7 +211,7 @@ export const chatSessions = sqliteTable(
   'chat_sessions',
   {
     id: text('id').primaryKey(),
-    // Firebase uid — pseudonymous (anonymous or real). Free-form text, no FK.
+    // Anonymous diner session id — pseudonymous, free-form text, no FK.
     uid: text('uid').notNull(),
     // Full conversation: [{role:'user'|'assistant', content:string}, …]
     messages: text('messages').notNull(),

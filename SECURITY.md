@@ -31,9 +31,8 @@ In scope:
 
 Out of scope:
 
-- Third-party services we depend on (Cloudflare, Firebase, OpenAI) — report
-  those upstream.
-- Bugs in self-hosters' Cloudflare/Firebase configurations.
+- Third-party services we depend on (Cloudflare, OpenAI) — report those upstream.
+- Bugs in self-hosters' Cloudflare configurations.
 - Denial-of-service via uncapped resource consumption on a self-hosted
   instance — operators should configure their own rate limits.
 

@@ -625,19 +625,6 @@ export interface User extends BaseUser {
   email?: string;
 }
 
-/**
- * Firebase Auth user object (simplified type for auth state).
- * Corresponds to firebase_auth.User in Flutter.
- */
-export interface FirebaseUser {
-  uid: string;
-  email?: string | null;
-  phoneNumber?: string | null;
-  displayName?: string | null;
-  photoURL?: string | null;
-  emailVerified: boolean;
-}
-
 // ============================================================================
 // Utility Types and Functions
 // ============================================================================

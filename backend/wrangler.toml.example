@@ -15,19 +15,28 @@ SERVICE_NAME = "menu-backend"
 # Public URL of your R2 bucket (or a custom domain pointing at it).
 R2_PUBLIC_URL = "https://pub-XXXXXXXX.r2.dev"
 
-# Firebase Auth issuer + audience for admin JWT verification.
-# AUTH_ISSUER  = https://securetoken.google.com/<your-firebase-project-id>
-# AUTH_AUDIENCE = <your-firebase-project-id>
-AUTH_ISSUER = "https://securetoken.google.com/your-firebase-project-id"
-AUTH_AUDIENCE = "your-firebase-project-id"
+# Cloudflare Access — admin JWT verification.
+# In Cloudflare dashboard → Zero Trust → Access → Applications → Add an
+# application for this Worker. Then:
+# - ACCESS_TEAM_DOMAIN = https://<your-team>.cloudflareaccess.com
+# - ACCESS_AUD = (the AUD tag shown in the Access app's "Overview")
+ACCESS_TEAM_DOMAIN = "https://your-team.cloudflareaccess.com"
+ACCESS_AUD = "your-aud-tag-from-cloudflare-access"
+
+# Comma-separated list of admin emails. The user's email comes from the
+# Cloudflare Access JWT; it must match (case-insensitive) one of these to
+# get past `requireAdmin`.
+ADMIN_EMAILS = "you@example.com"
 
 # Comma-separated list of origins allowed to hit this API.
 ALLOWED_ORIGINS = "http://localhost:3000,https://your-domain.example"
+# Hostname suffixes allowed over HTTPS (Pages preview deploys). Optional.
+# ALLOWED_HOST_SUFFIXES = ".your-pages-project.pages.dev"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "risto-db"
-# Run: npx wrangler d1 create risto-db  → copy the returned database_id here.
+database_name = "menu-db"
+# Run: npx wrangler d1 create menu-db  → copy the returned database_id here.
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "drizzle"
 

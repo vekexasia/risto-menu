@@ -34,14 +34,14 @@ service, embedding it in a paid product) requires a separate license. See
 | `backend/` | Hono API on Cloudflare Workers, Drizzle ORM over Cloudflare D1 |
 | `web/workers/chat/` | Separate Cloudflare Worker for the AI chat assistant (SSE streaming, OpenAI tool-calls) |
 | `packages/schemas/` | Shared Zod schemas (`@menu/schemas`) |
-| Auth | Firebase Auth → admin JWT verified by backend |
+| Auth | Cloudflare Access — admin login via Google/GitHub/email OTP/SAML/etc., JWT verified by backend |
 | Storage | Cloudflare R2 (images), Cloudflare KV (chat menu cache) |
 
 ## Self-hosting
 
 Full walkthrough: **[docs/self-hosting.md](docs/self-hosting.md)**.
 
-TL;DR for someone with a Cloudflare + Firebase account ready:
+TL;DR for someone with a Cloudflare account (Zero Trust enabled) ready:
 
 ```bash
 git clone https://github.com/vekexasia/risto-menu.git
@@ -70,7 +70,7 @@ cd web/workers/chat && npm run dev
 cd web && npm run dev
 ```
 
-Open <http://localhost:3000/admin>, sign in with the Firebase Google provider,
+Open <http://localhost:3000/admin> (in production, Cloudflare Access redirects you to login)
 and edit your menu. The first time you run the backend migration it seeds a
 default `settings` row with name "My Restaurant" — change it under
 `/admin?s=settings`.

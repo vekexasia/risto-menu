@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { getAuthInstance, signInWithGoogle, signOut } from "@/lib/firebase";
-import { getMe } from "@/lib/api";
+import { getMe, type MeResponse } from "@/lib/api";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 
 interface AuthState {
   loading: boolean;
-  user: FirebaseUser | null;
+  user: MeResponse | null;
   isAdmin: boolean;
 }
 
@@ -41,29 +39,28 @@ export default function AdminContent({
   useEffect(() => {
     // Playwright test bypass — inject via page.addInitScript
     if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
-      const bypass = (window as Window & { __playwright_admin__?: { user: { uid: string; email: string; displayName?: string } } }).__playwright_admin__;
+      const bypass = (window as Window & { __playwright_admin__?: { user: { uid: string; email: string; name?: string } } }).__playwright_admin__;
       if (bypass) {
-        const fakeUser = { uid: bypass.user.uid, email: bypass.user.email, displayName: bypass.user.displayName ?? null } as import('firebase/auth').User;
-        setAuthState({ loading: false, user: fakeUser, isAdmin: true });
+        setAuthState({
+          loading: false,
+          user: { uid: bypass.user.uid, email: bypass.user.email, name: bypass.user.name, isAdmin: true },
+          isAdmin: true,
+        });
         return;
       }
     }
 
-    const auth = getAuthInstance();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    // With Cloudflare Access in front of /admin/*, the user is already
+    // authenticated by the time this code runs. We just call /me to find out
+    // who they are and whether they're authorised.
+    getMe()
+      .then((me) => {
+        setAuthState({ loading: false, user: me, isAdmin: me.isAdmin === true });
+      })
+      .catch((error) => {
+        console.error("Failed to load /me:", error);
         setAuthState({ loading: false, user: null, isAdmin: false });
-        return;
-      }
-      try {
-        const me = await getMe();
-        setAuthState({ loading: false, user, isAdmin: me.isAdmin === true });
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        setAuthState({ loading: false, user, isAdmin: false });
-      }
-    });
-    return () => unsubscribe();
+      });
   }, []);
 
   useEffect(() => {
@@ -72,20 +69,9 @@ export default function AdminContent({
     }
   }, [authState.isAdmin, loadRestaurant]);
 
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      console.error("Sign in error:", error);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
-    }
+  const handleSignOut = () => {
+    // Cloudflare Access logout — clears the session cookie and redirects.
+    window.location.href = "/cdn-cgi/access/logout";
   };
 
   if (authState.loading) {
@@ -97,23 +83,16 @@ export default function AdminContent({
   }
 
   if (!authState.user) {
+    // Should be unreachable when Access is enabled — Access intercepts before
+    // the SPA loads. If we get here, /me returned an error (auth not configured,
+    // network problem, etc.).
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FBFAF9", fontFamily: "system-ui, sans-serif", padding: 16 }}>
         <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,.1)", padding: 32, maxWidth: 360, width: "100%", textAlign: "center" }}>
-          <div style={{ width: 40, height: 40, borderRadius: 8, background: "#1F1A14", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 16, color: "#C47A4F", fontWeight: 800 }}>R</div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1F1A14", margin: "0 0 6px" }}>Admin</h1>
-          <p style={{ fontSize: 13, color: "#888", margin: "0 0 24px" }}>Accedi per gestire il ristorante</p>
-          <button
-            onClick={handleSignIn}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "10px 16px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#424242", cursor: "pointer", fontFamily: "inherit" }}
-          >
-            <svg style={{ width: 18, height: 18, flexShrink: 0 }} viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Accedi con Google
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>Sessione non valida</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>Impossibile verificare l&apos;autenticazione. Aggiorna la pagina o ricontrolla la configurazione di Cloudflare Access.</p>
+          <button onClick={handleSignOut} style={{ padding: "8px 20px", background: "#F4F2EE", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, color: "#424242", cursor: "pointer" }}>
+            Riconnetti
           </button>
         </div>
       </div>
@@ -128,7 +107,7 @@ export default function AdminContent({
             <i className="fa-solid fa-ban" style={{ color: "#DC2626", fontSize: 18 }} />
           </div>
           <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>Accesso negato</h1>
-          <p style={{ fontSize: 13, color: "#888", margin: "0 0 6px" }}>Non sei un amministratore.</p>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 6px" }}>Il tuo indirizzo email non è in ADMIN_EMAILS.</p>
           <p style={{ fontSize: 12, color: "#BBB", margin: "0 0 20px", fontFamily: "monospace", wordBreak: "break-all" }}>{authState.user.email}</p>
           <button onClick={handleSignOut} style={{ padding: "8px 20px", background: "#F4F2EE", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, color: "#424242", cursor: "pointer" }}>
             Esci
@@ -141,8 +120,8 @@ export default function AdminContent({
   // ── Authenticated layout ────────────────────────────────────────
   const restaurantName = data?.name || "Admin";
   const brandInitials = getInitials(restaurantName);
-  const userInitials = authState.user.displayName
-    ? getInitials(authState.user.displayName)
+  const userInitials = authState.user.name
+    ? getInitials(authState.user.name)
     : (authState.user.email?.[0] || "U").toUpperCase();
 
   const totalEntries = categories.reduce((s, c) => s + c.entries.length, 0);

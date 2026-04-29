@@ -10,9 +10,9 @@ export interface Env {
   DB?: D1Database;
   PUBLIC_MENU_BUCKET?: R2Bucket;
   R2_PUBLIC_URL?: string;
-  AUTH_ISSUER?: string;
-  AUTH_AUDIENCE?: string;
-  ADMIN_UIDS?: string;
+  ACCESS_TEAM_DOMAIN?: string;
+  ACCESS_AUD?: string;
+  ADMIN_EMAILS?: string;
   OPENAI_API_KEY?: string;
   BASE_DOMAIN?: string;
 }

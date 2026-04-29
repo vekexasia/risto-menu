@@ -23,8 +23,8 @@ describe('getRuntimeConfig', () => {
 
   it('marks auth as configured when both issuer and audience are set', () => {
     const config = getRuntimeConfig({
-      AUTH_ISSUER: 'https://securetoken.google.com/my-project',
-      AUTH_AUDIENCE: 'my-project',
+      ACCESS_TEAM_DOMAIN: 'https://securetoken.google.com/my-project',
+      ACCESS_AUD: 'my-project',
     } as Env);
     expect(config.auth.configured).toBe(true);
     expect(config.auth.issuer).toBe('https://securetoken.google.com/my-project');
@@ -33,14 +33,14 @@ describe('getRuntimeConfig', () => {
 
   it('marks auth as NOT configured when only issuer is set', () => {
     const config = getRuntimeConfig({
-      AUTH_ISSUER: 'https://securetoken.google.com/my-project',
+      ACCESS_TEAM_DOMAIN: 'https://securetoken.google.com/my-project',
     } as Env);
     expect(config.auth.configured).toBe(false);
   });
 
   it('marks auth as NOT configured when only audience is set', () => {
     const config = getRuntimeConfig({
-      AUTH_AUDIENCE: 'my-project',
+      ACCESS_AUD: 'my-project',
     } as Env);
     expect(config.auth.configured).toBe(false);
   });

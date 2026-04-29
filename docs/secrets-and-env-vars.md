@@ -20,11 +20,12 @@ wrangler secret put OPENAI_API_KEY
 | Variable | Example value | Notes |
 |---|---|---|
 | `APP_ENV` | `production` | Controls feature flags and logging |
-| `AUTH_ISSUER` | `https://securetoken.google.com/<project>` | Firebase project ID |
-| `AUTH_AUDIENCE` | `<firebase-project-id>` | Must match `AUTH_ISSUER` project |
+| `ACCESS_TEAM_DOMAIN` | `https://yourteam.cloudflareaccess.com` | Cloudflare Access team domain. Required for admin auth. |
+| `ACCESS_AUD` | `1a2b3c…` | The `AUD` tag shown on the Access application's Overview tab. Required. |
+| `ADMIN_EMAILS` | `you@example.com,partner@example.com` | Comma-separated admin emails (case-insensitive). The Access JWT's `email` claim must match. |
 | `R2_PUBLIC_URL` | `https://pub-xxx.r2.dev` | Public CDN URL for uploaded images |
 | `ALLOWED_ORIGINS` | `https://your-domain.example` | Comma-separated CORS origins |
-| `ADMIN_UIDS` | `firebase-uid-1,firebase-uid-2` | Comma-separated Firebase UIDs allowed to access `/admin/*`. |
+| `ALLOWED_HOST_SUFFIXES` | `.your-pages-project.pages.dev` | Optional. Hostname suffixes allowed over HTTPS (Pages preview deploys). |
 
 ---
 
@@ -58,8 +59,8 @@ wrangler secret put REFRESH_SECRET
 | `ALLOWED_ORIGINS` | `https://your-domain.example` | Comma-separated origins allowed to call the chat worker. Localhost is allowed by default. |
 | `ALLOWED_HOST_SUFFIXES` | `.your-pages-project.pages.dev` | Comma-separated hostname suffixes allowed over HTTPS. Useful for Pages preview deploys. |
 
-The chat worker does not use Firebase. Diner chat auth uses signed anonymous
-session tokens created by `POST /session` and gated by Cloudflare IP.
+The chat worker does not authenticate diners — it issues signed anonymous
+session tokens (`POST /session`) gated by Cloudflare IP rate-limit.
 
 ---
 
@@ -70,19 +71,7 @@ Set in Pages dashboard → Settings → Environment variables (production) and
 use `web/.env.production.local` (gitignored) instead — the dashboard env vars
 only matter when Pages does the build itself.
 
-### Firebase (required)
-
-Get all values from Firebase console → Project settings → Your apps → Web app config.
-
-| Variable | Notes |
-|---|---|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `<project>.firebaseapp.com` |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | |
-
-### App URLs (required)
+### Required
 
 | Variable | Local dev value | Production value |
 |---|---|---|
@@ -95,6 +84,10 @@ Get all values from Firebase console → Project settings → Your apps → Web 
 |---|---|---|
 | `NEXT_PUBLIC_DEFAULT_LOCALE` | `en` | Default UI locale. One of: `it, en, de, fr, es, nl, ru, pt, vec`. |
 | `CF_PAGES_PROJECT` | `menu` | Cloudflare Pages project name used by `npm run deploy:cf`. |
+
+The frontend has **no auth-related env vars**. Cloudflare Access manages the
+admin login flow entirely; once a user is authenticated, their identity is
+sent via the `Cf-Access-Jwt-Assertion` header to the backend.
 
 ---
 
@@ -119,11 +112,15 @@ These files may contain real secrets and must stay out of git history:
    cd backend && npx wrangler d1 migrations apply menu-db --remote
    ```
 
-2. Set all Worker secrets (see above).
+2. Set up Cloudflare Access apps for the Pages project + the backend Worker
+   (Zero Trust → Access → Applications). Copy the AUD tag into both
+   `wrangler.toml` files.
 
-3. Set Pages environment variables (or `web/.env.production.local` for local builds).
+3. Set Worker secrets (see above).
 
-4. Build/deploy:
+4. Set Pages environment variables (or `web/.env.production.local` for local builds).
+
+5. Build/deploy:
    ```bash
    cd backend && npm run deploy
    cd ../web/workers/chat && npm run deploy
