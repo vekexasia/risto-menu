@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTranslations } from "@/lib/i18n";
 import Image from "next/image";
-import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { MenuItemDetail } from "@/components/menu/MenuItemDetail";
@@ -378,11 +377,6 @@ export default function MenuPageClient() {
         </div>
       )}
 
-      <Link href={`/${locale}`} className="fixed bottom-4 left-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-shadow">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-gray-600">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-      </Link>
       {hasChatWorker && (data?.features?.aiChat === true || aiChatDevOverride) && <ChatPanel locale={locale} />}
       <MenuItemDetail item={selectedItem} onClose={() => setSelectedItem(null)} locale={locale} />
 
