@@ -2,15 +2,13 @@
 
 Self-hostable digital restaurant menu, built on Next.js and Cloudflare. Diners scan a QR code, browse a localized menu, and can ask an optional AI assistant for recommendations.
 
-**One menu, one deploy.** Each instance serves a single restaurant. There is no tenant slug in the URL, no admin restaurant picker, and no domain-mapping layer. To run a second restaurant, deploy the stack a second time.
-
-Restaurant owners manage the menu from `/admin`. Diners land on `/{locale}/menu` and browse in one of nine supported locales.
+Restaurant owners manage the menu from `/admin`. QR codes should point to `/`; the app detects the locale and redirects diners to the localized menu.
 
 ## Live demo
 
 Try the public demo: **https://risto-menu.andreabaccega.com**
 
-- Public menu: https://risto-menu.andreabaccega.com/en/menu/
+- Public menu: https://risto-menu.andreabaccega.com
 - Admin: https://risto-menu.andreabaccega.com/admin
 
 The demo is editable and public. Data resets automatically, so do not enter real customer data.
@@ -29,16 +27,15 @@ Tony, the menu assistant, is enabled with a daily usage cap for the demo.
 
 ## What it does
 
-- Public QR menu at `/{locale}/menu` with localized category and item content.
+- Public QR menu from `/`, with locale detection and localized category and item content.
 - Admin SPA at `/admin` for settings, categories, entries, variants, extras, images, opening hours, publishing, and translations.
 - Optional AI chat assistant that can recommend items from the current menu.
 - Privacy-safe catalog view tracking for basic analytics.
 - Cloudflare Access admin auth, so there is no in-app password system to run.
-- Single-tenant deployment model designed for one restaurant per stack.
 
 ## Status
 
-Source-available. Single-tenant. The older multi-tenant version lived through April 2026; `main` is now the simplified single-tenant app.
+Source-available.
 
 ## License
 
@@ -96,9 +93,9 @@ cd web/workers/chat && npm run dev
 cd web && npm run dev
 ```
 
-Open the frontend dev server's `/en/menu` path for the diner menu.
+Open the frontend dev server's root path for the diner menu.
 
-For admin work, production uses Cloudflare Access at `/admin`. In local dev, either point `NEXT_PUBLIC_API_URL` at a deployed backend or use the Playwright admin bypass described in [docs/self-hosting.md](docs/self-hosting.md#8-run-locally). The first migration seeds a `settings` row named "My Restaurant"; change it from `/admin?s=settings`.
+`/admin` should be protected by Cloudflare Access. In local dev, either point `NEXT_PUBLIC_API_URL` at a deployed backend or use the Playwright admin bypass described in [docs/self-hosting.md](docs/self-hosting.md#8-run-locally). The first migration seeds a `settings` row named "My Restaurant"; change it from `/admin?s=settings`.
 
 ## Common commands
 
