@@ -62,7 +62,7 @@ beforeEach(() => {
 const menuData = {
   id: 'demo-restaurant',
   name: 'Trattoria Demo',
-  features: { aiChat: true, demoMode: true },
+  features: { aiChat: true },
   categories: [
     {
       id: 'cat-antipasti',

@@ -226,7 +226,7 @@ function catalogToStore(catalog: CatalogResponse) {
     openingSchedule,
     categories,
     promotion: undefined,
-    features: r.features ? { aiChat: r.features.aiChat, enabledLocales: r.features.enabledLocales, disabledLocales: r.features.disabledLocales, customLocales: r.features.customLocales, demoMode: r.features.demoMode } : undefined,
+    features: r.features ? { aiChat: r.features.aiChat, enabledLocales: r.features.enabledLocales, disabledLocales: r.features.disabledLocales, customLocales: r.features.customLocales } : undefined,
   };
 
   return { data, variantsCache, extrasCache, categoriesCache };

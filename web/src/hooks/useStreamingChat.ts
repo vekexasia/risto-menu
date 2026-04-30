@@ -97,7 +97,7 @@ export function useStreamingChat(locale: string) {
 
   const sendMessage = useCallback(async (content: string) => {
     if (!CHAT_WORKER_URL) {
-      useChatStore.getState().appendToStream('La chat non è disponibile in questa demo.');
+      useChatStore.getState().appendToStream('Chat is not available right now.');
       return;
     }
     const store = useChatStore.getState();

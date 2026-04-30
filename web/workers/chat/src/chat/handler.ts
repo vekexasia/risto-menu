@@ -83,7 +83,7 @@ export async function handleChat(request: Request, env: Env, corsHeaders: Record
   if (!dailyCap.allowed) {
     console.log(`[CHAT] ${ip} | BLOCKED: daily AI request cap reached (${dailyCap.used}/${dailyCap.limit})`);
     return new Response(
-      `${encodeTextEvent('Tony ha raggiunto il limite giornaliero della demo. Riprova domani.')}\n${encodeDoneEvent()}`,
+      `${encodeTextEvent('The chat assistant has reached its daily request limit. Please try again tomorrow.')}\n${encodeDoneEvent()}`,
       { headers: { ...sseHeaders(), ...corsHeaders } },
     );
   }

@@ -72,7 +72,6 @@ export const CatalogRestaurantSchema = z.object({
     enabledLocales: z.array(z.string()).nullable().optional(),
     disabledLocales: z.array(z.string()).nullable().optional(),
     customLocales: z.array(z.object({ code: z.string(), name: z.string() })).nullable().optional(),
-    demoMode: z.boolean().optional(),
   }).optional(),
 });
 export type CatalogRestaurant = z.infer<typeof CatalogRestaurantSchema>;

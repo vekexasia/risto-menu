@@ -41,7 +41,6 @@ admin.get('/catalog', ...base, async (c) => {
   const catalog = await buildCatalogFromDb(c.get('db'), {
     publicOnly: false,
     includeHidden: true,
-    demoMode: isDemoMode(c.env),
   });
   if (!catalog) return c.json({ error: 'Not found' }, 404);
   return c.json(catalog);
