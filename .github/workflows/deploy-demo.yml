@@ -117,9 +117,13 @@ jobs:
           database_id = "${{ vars.DEMO_D1_DATABASE_ID }}"
           migrations_dir = "../../../backend/drizzle"
 
+          [ai]
+          binding = "AI"
+
           [vars]
-          DEMO_MODE = "true"
           CHAT_SESSION_SECRET = "${{ secrets.DEMO_CHAT_SESSION_SECRET }}"
+          LLM_PROVIDER = "workers-ai"
+          LLM_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
           ALLOWED_ORIGINS = "${DEMO_WEB_DOMAIN},${DEMO_PAGES_DOMAIN}"
           ALLOWED_HOST_SUFFIXES = ".pages.dev"
           EOF

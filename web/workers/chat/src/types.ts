@@ -8,6 +8,7 @@ export interface Env {
   OPENAI_API_KEY: string;
   REFRESH_SECRET: string;
   DEMO_MODE?: string;
+  AI?: Ai;
 }
 
 export interface ChatMessage {

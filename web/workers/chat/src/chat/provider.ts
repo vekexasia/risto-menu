@@ -14,8 +14,30 @@ export interface LLMProvider {
   }): Promise<void>;
 }
 
+class WorkersAIProvider implements LLMProvider {
+  constructor(private ai: Ai, private model: string) {}
+
+  async chat(params: Parameters<LLMProvider['chat']>[0]): Promise<void> {
+    const result = await this.ai.run(this.model, {
+      messages: [
+        { role: 'system', content: params.systemPrompt },
+        ...params.messages,
+      ],
+      max_tokens: 700,
+      temperature: 0.4,
+    });
+    const text = typeof result.response === 'string' ? result.response : JSON.stringify(result);
+    params.onText(text);
+  }
+}
+
 export function createProvider(env: Env): LLMProvider {
   const providerName = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
+
+  if (providerName === 'workers-ai') {
+    if (!env.AI) throw new Error('Workers AI binding is not configured');
+    return new WorkersAIProvider(env.AI, env.LLM_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast');
+  }
 
   if (providerName === 'openai') {
     return new OpenAIProvider(env.OPENAI_API_KEY, env.LLM_MODEL || 'gpt-5.4-mini');
