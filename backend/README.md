@@ -7,19 +7,17 @@ Cloudflare Worker REST API for Risto Menu.
 - Hono HTTP app
 - Drizzle ORM over Cloudflare D1/SQLite
 - Cloudflare R2 for uploaded images and catalog snapshots when bound
-- Firebase Auth JWT verification via JWKS
+- Cloudflare Access JWT verification via JWKS
 - Shared request/response schemas from `@menu/schemas`
 
 ## Main route groups
 
 - `GET /`, `GET /health`, `GET /ready` — service checks
-- `GET /catalog/:slug` — public published catalog with Cache API/R2/live-D1 fallback
-- `POST /catalog/:slug/view` — privacy-safe menu item analytics
-- `GET /me` — authenticated profile and restaurant memberships
-- `POST /restaurants` — restaurant creation
-- `/admin/restaurants/:restaurantId/...` — tenant-scoped admin CRUD, settings,
-  hours, analytics, uploads, translations, and catalog refresh
-- `POST /translate` — deprecated compatibility route returning `410 Gone`
+- `GET /catalog` — public published catalog with Cache API/R2/live-D1 fallback
+- `POST /catalog/view` — privacy-safe menu item analytics
+- `POST /catalog/publish` — admin-only catalog snapshot refresh
+- `GET /admin/me` — authenticated profile with admin flag
+- `/admin/...` — admin CRUD for settings, categories, entries, hours, analytics, uploads, translations, and catalog refresh
 
 ## Commands
 
@@ -36,7 +34,7 @@ Apply D1 migrations:
 
 ```bash
 cd backend
-npx wrangler d1 migrations apply risto-db --remote
+npx wrangler d1 migrations apply menu-db --remote
 ```
 
 Import from a legacy backup JSON:
@@ -58,7 +56,7 @@ Important bindings/vars:
 - `PUBLIC_MENU_BUCKET` — optional R2 bucket binding. Without it, catalog/image
   routes fall back or return a clear 503 where R2 is required.
 - `R2_PUBLIC_URL` — public base URL for R2 images.
-- `AUTH_ISSUER`, `AUTH_AUDIENCE` — Firebase Auth JWT verification.
+- `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` — Cloudflare Access JWT verification.
 - `ALLOWED_ORIGINS` — comma-separated CORS allowlist.
 - `OPENAI_API_KEY` — secret used by translation and OpenAI chat flows.
 

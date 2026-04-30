@@ -2,7 +2,6 @@
 
 - Status: accepted
 - Date: 2026-04-28
-- Supersedes: `docs/adr/0001-cloudflare-backend-platform.md`
 
 ## Context
 
@@ -12,7 +11,7 @@ larger SaaS surface including orders, bookings, payments, and billing. On
 current product scope is:
 
 - public localized menu display
-- tenant-scoped admin CRUD/settings/hours/analytics
+- admin CRUD/settings/hours/analytics
 - image uploads and catalog snapshots
 - translation helpers
 - AI chat recommendations
@@ -28,7 +27,7 @@ Use a Cloudflare-first D1 architecture:
 - Drizzle ORM and SQL migrations
 - Cloudflare R2 for public images and catalog snapshots where enabled
 - Cloudflare Cache API for hot public catalog responses
-- Firebase Auth for admin identity only
+- Cloudflare Access for admin identity
 - Shared Zod schemas in `packages/schemas/`
 
 ## Consequences

@@ -3,10 +3,6 @@
 This guide walks through deploying your own copy on Cloudflare. Everything
 here is free-tier-friendly; you only pay if traffic or AI chat usage grows.
 
-**Single-tenant model.** This deployment serves one restaurant. To run a
-second restaurant, repeat this setup with a different Pages project name,
-fresh D1 database, fresh KV namespace, and fresh worker names.
-
 ---
 
 ## What you'll provision
@@ -257,8 +253,7 @@ Point your domain at the Pages project:
 4. Update the Cloudflare Access apps (Zero Trust → Access) to cover the new
    custom domain too — add it to the application's hostnames list.
 
-That's it. There is no per-restaurant domain mapping table — the deployment
-**is** your restaurant.
+That's it.
 
 ---
 

@@ -33,10 +33,6 @@ Tony, the menu assistant, is enabled with a daily usage cap for the demo.
 - Privacy-safe catalog view tracking for basic analytics.
 - Cloudflare Access admin auth, so there is no in-app password system to run.
 
-## Status
-
-Source-available.
-
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — free for personal, non-commercial,

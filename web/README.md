@@ -43,6 +43,7 @@ See `../docs/secrets-and-env-vars.md`.
 
 ## Routing notes
 
+- `/` redirects to the configured default locale; QR codes should point to `/`.
 - Public localized app routes live under `src/app/[locale]/`.
 - Admin routes are handled by `src/app/admin/[[...segments]]/AdminRouter.tsx`.
 - Shared UI is under `src/components/`.
