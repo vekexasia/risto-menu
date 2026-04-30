@@ -124,6 +124,7 @@ jobs:
           CHAT_SESSION_SECRET = "${{ secrets.DEMO_CHAT_SESSION_SECRET }}"
           LLM_PROVIDER = "workers-ai"
           LLM_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+          DAILY_AI_REQUEST_LIMIT = "200"
           ALLOWED_ORIGINS = "${DEMO_WEB_DOMAIN},${DEMO_PAGES_DOMAIN}"
           ALLOWED_HOST_SUFFIXES = ".pages.dev"
           EOF

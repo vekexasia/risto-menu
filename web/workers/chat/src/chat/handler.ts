@@ -7,6 +7,7 @@ import { encodeTextEvent, encodeToolCallEvent, encodeDoneEvent, encodeErrorEvent
 import { getItemDetail, searchByAllergens } from '../menu/serialize';
 import { checkMenuForChat } from '../middleware/menu-guard';
 import { checkIpRateLimit, checkSessionRateLimit } from '../middleware/rate-limit';
+import { consumeDailyAiRequest } from '../middleware/daily-cap';
 import type { ChatSession } from '../middleware/session';
 
 const MAX_MESSAGES = 20;
@@ -76,6 +77,15 @@ export async function handleChat(request: Request, env: Env, corsHeaders: Record
       status: 403,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
+  }
+
+  const dailyCap = await consumeDailyAiRequest(env);
+  if (!dailyCap.allowed) {
+    console.log(`[CHAT] ${ip} | BLOCKED: daily AI request cap reached (${dailyCap.used}/${dailyCap.limit})`);
+    return new Response(
+      `${encodeTextEvent('Tony ha raggiunto il limite giornaliero della demo. Riprova domani.')}\n${encodeDoneEvent()}`,
+      { headers: { ...sseHeaders(), ...corsHeaders } },
+    );
   }
 
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
