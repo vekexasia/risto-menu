@@ -163,7 +163,7 @@ jobs:
         run: |
           curl --fail --retry 8 --retry-all-errors --retry-delay 5 --max-time 20 "${DEMO_API_DOMAIN}/health"
           curl --fail --retry 8 --retry-all-errors --retry-delay 5 --max-time 20 "${DEMO_API_DOMAIN}/catalog" -o /tmp/catalog.json
-          node -e "const c=require('/tmp/catalog.json'); const entries=(c.menus||[]).flatMap(m => m.categories || []).flatMap(cat => cat.entries || []); if (!c.restaurant?.features?.demoMode) throw new Error('demoMode missing'); if (entries.length < 10) throw new Error('demo catalog too small')"
+          node -e "const c=require('/tmp/catalog.json'); const entries=(c.menus||[]).flatMap(m => m.categories || []).flatMap(cat => cat.entries || []); if (c.restaurant?.name !== 'Trattoria Demo') throw new Error('demo fixture not loaded: ' + c.restaurant?.name); if (entries.length < 10) throw new Error('demo catalog too small')"
 
       - name: Smoke test demo frontend
         env:
