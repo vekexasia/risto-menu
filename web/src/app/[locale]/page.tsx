@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslations } from "@/lib/i18n";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { useParams } from "next/navigation";
 import { useRestaurantStore } from "@/stores/restaurantStore";
 import { RestaurantInfoModal } from "@/components/menu/RestaurantInfoModal";
 import { PromotionPopup } from "@/components/menu/PromotionPopup";
+import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { getContentDisplayText } from "@/lib/content-presentation";
 
 export default function HomePage() {
@@ -98,7 +99,7 @@ export default function HomePage() {
   });
 
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-gray-100 pb-24">
       {/* Header with image */}
       <header className="relative" data-locale-anchor="home:header">
         {data.headerImage && (
@@ -250,6 +251,8 @@ export default function HomePage() {
           onClose={handlePromoClose}
         />
       )}
+
+      <Suspense><LanguagePicker /></Suspense>
     </main>
   );
 }
