@@ -12,6 +12,20 @@ Diners scan a QR code → land on `/{locale}/menu` → browse a localized menu
 in nine languages → optionally chat with an AI that knows your menu.
 Restaurant owners manage everything from `/admin`.
 
+## Live demo
+
+Try the public demo: **https://risto-menu.andreabaccega.com**
+
+- Public menu: https://risto-menu.andreabaccega.com/en/menu/
+- Admin: https://risto-menu.andreabaccega.com/admin
+
+The demo is editable and public. Data resets automatically, so do not enter real customer data.
+Tony, the menu assistant, is enabled with a daily usage cap for the demo.
+
+![Risto Menu public menu](docs/assets/demo-menu.jpg)
+
+![Risto Menu item detail](docs/assets/demo-item-detail.jpg)
+
 ## Status
 
 Source-available. Single-tenant. The multi-tenant version of this repo lived

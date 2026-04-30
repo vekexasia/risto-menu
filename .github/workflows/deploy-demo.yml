@@ -141,7 +141,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ${{ env.DEMO_API_DOMAIN }}
           NEXT_PUBLIC_CHAT_WORKER_URL: ${{ env.DEMO_CHAT_DOMAIN }}
-          NEXT_PUBLIC_DEFAULT_LOCALE: it
+          NEXT_PUBLIC_DEFAULT_LOCALE: en
         run: npm run build:cf
 
       - name: Deploy demo frontend

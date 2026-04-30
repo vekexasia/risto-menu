@@ -66,7 +66,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: https://risto-menu-api.andreabaccega.com
           NEXT_PUBLIC_CHAT_WORKER_URL: https://risto-menu-demo-chat.vekexasia.workers.dev
-          NEXT_PUBLIC_DEFAULT_LOCALE: it
+          NEXT_PUBLIC_DEFAULT_LOCALE: en
       - name: Assert demo build has Tony and no private chat URL
         run: |
           grep -R "https://risto-menu-demo-chat.vekexasia.workers.dev" web/out/_next/static
