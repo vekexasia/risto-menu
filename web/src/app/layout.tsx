@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import { defaultLocale } from "@/lib/i18n-config";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -9,7 +10,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: "Menu Risto",
-  description: "Menu digitale del ristorante",
+  description: "Digital restaurant menu",
 };
 
 export default function RootLayout({
@@ -18,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it">
+    <html lang={defaultLocale}>
       <body
         className={`${montserrat.variable} font-sans antialiased bg-gray-100 min-h-screen`}
         style={
