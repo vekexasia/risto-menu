@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Dialog, DialogPanel } from '@headlessui/react';
 import { useTranslations } from '@/lib/i18n';
-import { useState, useCallback } from 'react';
+import { Suspense, useState, useCallback } from 'react';
 import type { RestaurantData, TimeSlot } from '@/lib/types';
 import { useBackButtonClose } from '@/hooks/useBackButtonClose';
+import { LanguagePicker } from '@/components/ui/LanguagePicker';
 
 interface RestaurantInfoModalProps {
   restaurant: RestaurantData;
@@ -188,6 +189,11 @@ export function RestaurantInfoModal({ restaurant, isOpen, onClose }: RestaurantI
                   )}
                 </div>
               )}
+
+              {/* LANGUAGE */}
+              <Section title={t('language')}>
+                <Suspense><LanguagePicker variant="inline" /></Suspense>
+              </Section>
 
               {/* IL RISTORANTE */}
               {restaurant.messages?.intro && (

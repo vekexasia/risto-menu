@@ -24,7 +24,11 @@ type SavedLocalePosition = {
   fallbackScrollY?: number;
 };
 
-export function LanguagePicker() {
+type LanguagePickerProps = {
+  variant?: 'floating' | 'inline';
+};
+
+export function LanguagePicker({ variant = 'floating' }: LanguagePickerProps = {}) {
   const locale = useLocale();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -127,43 +131,55 @@ export function LanguagePicker() {
     router.push(href, { scroll: false });
   };
 
+  const list = (
+    <ul className="py-2">
+      {links.map((option) => {
+        const isActive = option.code === locale;
+        return (
+          <li key={option.code}>
+            <button
+              type="button"
+              onClick={() => handleSelect(option.href, option.code)}
+              className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
+                isActive
+                  ? "bg-primary/10 font-semibold text-primary"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span>{option.label}</span>
+              {isActive && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  if (variant === 'inline') {
+    return (
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        {list}
+      </div>
+    );
+  }
+
   return (
     <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 -translate-x-1/2" ref={containerRef}>
       <div className="pointer-events-auto relative">
         {open && (
           <div className="absolute bottom-full left-1/2 mb-2 w-48 -translate-x-1/2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-            <ul className="py-2">
-              {links.map((option) => {
-                const isActive = option.code === locale;
-                return (
-                  <li key={option.code}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(option.href, option.code)}
-                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                        isActive
-                          ? "bg-primary/10 font-semibold text-primary"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span>{option.label}</span>
-                      {isActive && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={2}
-                          stroke="currentColor"
-                          className="h-4 w-4"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                        </svg>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            {list}
           </div>
         )}
 
