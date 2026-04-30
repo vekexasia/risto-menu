@@ -166,8 +166,8 @@ export default function AdminContent({
 
   const topNavItems: { href: string; label: string; matchPrefix?: string }[] = [
     { href: s("categories"), label: "Menu" },
-    { href: s("analytics"), label: "Analisi" },
-    { href: s("settings-profile"), label: "Impostazioni", matchPrefix: "settings" },
+    { href: s("analytics"), label: "Analytics" },
+    { href: s("settings-profile"), label: "Settings", matchPrefix: "settings" },
   ];
 
   const firstCategoryId = categories[0]?.id;
@@ -176,18 +176,18 @@ export default function AdminContent({
     : s("categories");
 
   const gestioneItems: { href: string; icon: string; label: string; count?: number | string }[] = [
-    { href: s("categories"), icon: "fa-layer-group", label: "Categorie", count: categories.length },
-    { href: entriesHref, icon: "fa-utensils", label: "Piatti", count: totalEntries },
-    { href: s("hours"), icon: "fa-clock", label: "Orari" },
-    { href: s("analytics"), icon: "fa-chart-simple", label: "Analisi" },
+    { href: s("categories"), icon: "fa-layer-group", label: "Categories", count: categories.length },
+    { href: entriesHref, icon: "fa-utensils", label: "Items", count: totalEntries },
+    { href: s("hours"), icon: "fa-clock", label: "Hours" },
+    { href: s("analytics"), icon: "fa-chart-simple", label: "Analytics" },
   ];
 
   const settingsItems: { href: string; icon: string; label: string }[] = [
-    { href: s("settings-profile"), icon: "fa-user", label: "Profilo" },
-    { href: s("settings-languages"), icon: "fa-language", label: "Lingue" },
-    { href: s("settings-communications"), icon: "fa-bullhorn", label: "Comunicazioni" },
+    { href: s("settings-profile"), icon: "fa-user", label: "Profile" },
+    { href: s("settings-languages"), icon: "fa-language", label: "Languages" },
+    { href: s("settings-communications"), icon: "fa-bullhorn", label: "Announcements" },
     { href: s("settings-chat-ai"), icon: "fa-robot", label: "Chat AI" },
-    { href: s("settings-publishing"), icon: "fa-globe", label: "Pubblicazione" },
+    { href: s("settings-publishing"), icon: "fa-globe", label: "Publishing" },
   ];
 
   const isActive = (href: string) => {
@@ -259,7 +259,7 @@ export default function AdminContent({
             onClick={handleSignOut}
             style={{ background: "transparent", border: "none", color: "rgba(255,255,255,.5)", fontSize: 11.5, cursor: "pointer", padding: "4px 6px", borderRadius: 4 }}
           >
-            Esci
+            Sign out
           </button>
         </div>
       </header>
@@ -281,7 +281,7 @@ export default function AdminContent({
           )}
 
           <div style={{ padding: "0 10px", marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Gestione</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Manage</div>
             {gestioneItems.map((item) => (
               <Link
                 key={item.href}
@@ -310,7 +310,7 @@ export default function AdminContent({
           </div>
 
           <div style={{ padding: "0 10px", marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Impostazioni</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Settings</div>
             {settingsItems.map((item) => (
               <Link
                 key={item.href}
@@ -338,7 +338,7 @@ export default function AdminContent({
           <div style={{ marginTop: "auto", padding: "0 10px" }}>
             <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 6, padding: "10px 12px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#424242" }}>Completezza</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#424242" }}>Completeness</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#1F8E5A" }}>{completeness}%</span>
               </div>
               <div style={{ height: 4, background: "#E7E5E4", borderRadius: 2, overflow: "hidden" }}>
@@ -346,8 +346,8 @@ export default function AdminContent({
               </div>
               <div style={{ fontSize: 10.5, color: "#888", marginTop: 6 }}>
                 {entriesWithMissingTranslations === 0
-                  ? "Tutti i piatti tradotti"
-                  : `${entriesWithMissingTranslations} piatt${entriesWithMissingTranslations === 1 ? "o" : "i"} con traduzioni mancanti`}
+                  ? "All items translated"
+                  : `${entriesWithMissingTranslations} item${entriesWithMissingTranslations === 1 ? "" : "s"} missing translations`}
               </div>
             </div>
           </div>

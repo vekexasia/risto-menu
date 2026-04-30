@@ -240,7 +240,7 @@ export default function CategoriesPage() {
       }
       done++;
       const hasMore = done < workItems.length;
-      setBulkProgress({ done, total: workItems.length, success, failed, current, status: hasMore ? "Traduzione in corso..." : undefined });
+      setBulkProgress({ done, total: workItems.length, success, failed, current, status: hasMore ? "Translation in progress..." : undefined });
       if (hasMore) await sleep(TRANSLATE_THROTTLE_MS);
     }
 
@@ -327,15 +327,15 @@ export default function CategoriesPage() {
             <div style={{ fontSize: 11, fontWeight: 700, color: "#A15E35", textTransform: "uppercase", letterSpacing: 0.6, display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
               <span>Menu</span>
               <span style={{ opacity: 0.4 }}>›</span>
-              <span style={{ color: "#888" }}>Categorie</span>
+              <span style={{ color: "#888" }}>Categories</span>
             </div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1F1A14", margin: 0, marginBottom: 5 }}>
-              Categorie del menu
+              Menu categories
             </h1>
             <div style={{ fontSize: 12, color: "#888", display: "flex", gap: 6, alignItems: "center" }}>
-              <span>{filteredCategories.length} categorie</span>
+              <span>{filteredCategories.length} categories</span>
               <span style={{ color: "#D4CFC9" }}>·</span>
-              <span>{filteredCategories.reduce((s, c) => s + c.entryCount, 0)} piatti totali</span>
+              <span>{filteredCategories.reduce((s, c) => s + c.entryCount, 0)} items total</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -343,7 +343,7 @@ export default function CategoriesPage() {
               onClick={openCreateModal}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#C47A4F", color: "#fff", border: "none", borderRadius: 6, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >
-              <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> Nuova categoria
+              <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> New category
             </button>
           </div>
         </div>
@@ -355,7 +355,7 @@ export default function CategoriesPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca categoria, piatto…"
+              placeholder="Search category, item..."
               className="adm-input"
               style={{ width: "100%", height: 36, borderRadius: 6, border: "1px solid #E7E5E4", padding: "0 44px 0 36px", fontSize: 13, background: "#fff", fontFamily: "inherit", color: "#424242", boxSizing: "border-box" }}
             />
@@ -391,11 +391,11 @@ export default function CategoriesPage() {
                 <i className="fa-solid fa-language" style={{ fontSize: 13 }} />
               </span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1F1A14" }}>Traduzioni automatiche</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1F1A14" }}>Automatic translations</div>
                 <div style={{ fontSize: 11.5, color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {bulkTranslating
-                    ? bulkProgress?.current ?? "Traduzione in corso..."
-                    : "Completa o aggiorna i nomi delle categorie"}
+                    ? bulkProgress?.current ?? "Translation in progress..."
+                    : "Fill or update category names"}
                 </div>
               </div>
             </div>
@@ -411,19 +411,19 @@ export default function CategoriesPage() {
                 disabled={bulkTranslating}
                 style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, background: "#2563EB", color: "#fff", border: "none", borderRadius: 999, cursor: bulkTranslating ? "not-allowed" : "pointer", opacity: bulkTranslating ? 0.5 : 1 }}
               >
-                Mancanti
+                Missing
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm("Ritraduci tutto? Sovrascriverà le traduzioni esistenti.")) {
+                  if (window.confirm("Retranslate everything? This will overwrite existing translations.")) {
                     handleBulkTranslateCategoryNames(true);
                   }
                 }}
                 disabled={bulkTranslating}
                 style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, background: "#F0EEEA", color: "#424242", border: "none", borderRadius: 999, cursor: bulkTranslating ? "not-allowed" : "pointer", opacity: bulkTranslating ? 0.5 : 1 }}
               >
-                Ritraduci
+                Retranslate
               </button>
             </div>
           </div>
@@ -459,8 +459,8 @@ export default function CategoriesPage() {
               />
             </div>
             <div style={{ width: 16 }} />
-            <div style={{ flex: 2, minWidth: 0 }}>Categoria</div>
-            <div style={{ width: 70, textAlign: "right" }}>Piatti</div>
+            <div style={{ flex: 2, minWidth: 0 }}>Category</div>
+            <div style={{ width: 70, textAlign: "right" }}>Items</div>
             <div style={{ width: 28 }} />
             <div style={{ width: 92 }} />
           </div>
@@ -469,7 +469,7 @@ export default function CategoriesPage() {
           <div>
             {filteredCategories.length === 0 ? (
               <div style={{ padding: "32px 14px", textAlign: "center", color: "#9A9590", fontSize: 13 }}>
-                Nessuna categoria trovata
+                No categories found
               </div>
             ) : (
               <SortableList
@@ -528,10 +528,10 @@ export default function CategoriesPage() {
                         if (missingTitleLocales.length === 0 && dishMissing === 0) return null;
                         const lines: string[] = [];
                         if (missingTitleLocales.length > 0) {
-                          lines.push(`Titolo: mancano ${missingTitleLocales.map((l) => l.toUpperCase()).join(", ")}`);
+                          lines.push(`Title: missing ${missingTitleLocales.map((l) => l.toUpperCase()).join(", ")}`);
                         }
                         if (dishMissing > 0) {
-                          lines.push(`${dishMissing} piatt${dishMissing === 1 ? "o" : "i"} con traduzioni mancanti`);
+                          lines.push(`${dishMissing} item${dishMissing === 1 ? "" : "s"} missing translations`);
                         }
                         return (
                           <i
@@ -547,7 +547,7 @@ export default function CategoriesPage() {
                     <div style={{ width: 92, display: "flex", gap: 4, justifyContent: "flex-end" }}>
                       <button
                         onClick={(e) => openEditModal(category, e)}
-                        title="Modifica"
+                        title="Edit"
                         style={{ width: 28, height: 28, border: "none", background: "transparent", borderRadius: 4, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
                         <i className="fa-solid fa-pen" style={{ fontSize: 11 }} />
@@ -555,14 +555,14 @@ export default function CategoriesPage() {
                       <button
                         onClick={(e) => handleDeleteCategory(category, e)}
                         disabled={deletingCategoryId === category.id}
-                        title="Elimina"
+                        title="Delete"
                         style={{ width: 28, height: 28, border: "none", background: "transparent", borderRadius: 4, color: deletingCategoryId === category.id ? "#C8C3BC" : "#DC2626", cursor: deletingCategoryId === category.id ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
                         <i className={deletingCategoryId === category.id ? "fa-solid fa-spinner fa-spin" : "fa-solid fa-trash"} style={{ fontSize: 11 }} />
                       </button>
                       <Link
                         href={`/admin?s=entries&category=${category.id}`}
-                        title="Vedi piatti"
+                        title="View items"
                         style={{ width: 28, height: 28, border: "none", background: "transparent", borderRadius: 4, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
                       >
                         <i className="fa-solid fa-chevron-right" style={{ fontSize: 11 }} />
@@ -578,7 +578,7 @@ export default function CategoriesPage() {
         {/* Bulk action bar */}
         {selected.size > 0 && (
           <div style={{ position: "sticky", bottom: 16, marginTop: 16, background: "#1F1A14", color: "#fff", borderRadius: 8, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>{selected.size} selezionate</span>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>{selected.size} selected</span>
             <div style={{ flex: 1 }} />
             <button style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 500, padding: "6px 10px", borderRadius: 5, cursor: "pointer", display: "inline-flex", gap: 5, alignItems: "center" }}>
               <i className="fa-solid fa-language" /> Traduci
@@ -602,10 +602,10 @@ export default function CategoriesPage() {
 
         {/* Completeness card */}
         <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>Completezza menu</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>Menu completeness</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 26, fontWeight: 700, color: "#1F1A14", letterSpacing: -0.5 }}>{completeness}%</span>
-            <span style={{ fontSize: 12, color: "#888" }}>traduzioni</span>
+            <span style={{ fontSize: 12, color: "#888" }}>translations</span>
           </div>
           <div style={{ height: 6, background: "#E7E5E4", borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
             <div style={{ height: "100%", background: completeness >= 80 ? "#1F8E5A" : completeness >= 50 ? "#B8860B" : "#C47A4F", borderRadius: 3, width: `${completeness}%`, transition: "width .3s" }} />
@@ -613,14 +613,14 @@ export default function CategoriesPage() {
           {missingTranslations > 0 && (
             <div style={{ fontSize: 11, color: "#888" }}>
               <i className="fa-solid fa-triangle-exclamation" style={{ color: "#B8860B", marginRight: 4 }} />
-              {missingTranslations} piatt{missingTranslations === 1 ? "o" : "i"} con traduzioni mancanti
+              {missingTranslations} item{missingTranslations === 1 ? "" : "s"} missing translations
             </div>
           )}
         </div>
 
         {/* Top categories */}
         <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Top categorie · piatti</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Top categories · items</div>
           {topCategories.map((cat, i) => (
             <div key={cat.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < topCategories.length - 1 ? "1px dashed #E7E5E4" : "none" }}>
               <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", border: "1px solid #E7E5E4", fontSize: 10.5, fontWeight: 700, color: "#888", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -640,18 +640,18 @@ export default function CategoriesPage() {
             <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
               <i className="fa-solid fa-lightbulb" style={{ color: "#A15E35", marginTop: 2, fontSize: 14 }} />
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#A15E35" }}>Suggerimento</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#A15E35" }}>Tip</div>
                 <div style={{ fontSize: 11.5, color: "#6B4A2B", marginTop: 4, lineHeight: 1.45 }}>
                   {missingTranslations === 1
-                    ? "1 piatto ha traduzioni mancanti."
-                    : `${missingTranslations} piatti hanno traduzioni mancanti.`}{" "}
-                  Completale per migliorare l&apos;esperienza degli ospiti internazionali.
+                    ? "1 item is missing translations."
+                    : `${missingTranslations} items are missing translations.`}{" "}
+                  Complete them to improve the experience for international guests.
                 </div>
                 <button
                   onClick={() => setActiveFilter("Incomplete")}
                   style={{ marginTop: 8, background: "transparent", border: "none", color: "#A15E35", fontSize: 11.5, fontWeight: 700, padding: 0, cursor: "pointer" }}
                 >
-                  Filtra incomplete →
+                  Filter incomplete →
                 </button>
               </div>
             </div>
@@ -668,7 +668,7 @@ export default function CategoriesPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid #E7E5E4" }}>
               <div>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1F1A14", margin: 0 }}>
-                  {editingCategory.id === "" ? "Nuova categoria" : "Modifica categoria"}
+                  {editingCategory.id === "" ? "New category" : "Edit category"}
                 </h3>
                 {editingCategory.id !== "" && (
                   <div style={{ fontSize: 11.5, color: "#888", marginTop: 2 }}>{editingCategory.name}</div>
