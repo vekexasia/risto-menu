@@ -1,16 +1,10 @@
 # Risto Menu
 
-Self-hostable digital restaurant menu, built on Next.js + Cloudflare Workers
-+ Cloudflare D1, with an optional OpenAI-powered AI assistant.
+Self-hostable digital restaurant menu, built on Next.js and Cloudflare. Diners scan a QR code, browse a localized menu, and can ask an optional AI assistant for recommendations.
 
-**One menu, one deploy.** Each instance serves a single restaurant — no
-multi-tenancy, no slug in the URL, no admin restaurant picker. To run a
-second restaurant, deploy the stack a second time. This keeps the codebase
-small and the operator's mental model simple.
+**One menu, one deploy.** Each instance serves a single restaurant. There is no tenant slug in the URL, no admin restaurant picker, and no domain-mapping layer. To run a second restaurant, deploy the stack a second time.
 
-Diners scan a QR code → land on `/{locale}/menu` → browse a localized menu
-in nine languages → optionally chat with an AI that knows your menu.
-Restaurant owners manage everything from `/admin`.
+Restaurant owners manage the menu from `/admin`. Diners land on `/{locale}/menu` and browse in one of nine supported locales.
 
 ## Live demo
 
@@ -33,10 +27,18 @@ Tony, the menu assistant, is enabled with a daily usage cap for the demo.
   </tr>
 </table>
 
+## What it does
+
+- Public QR menu at `/{locale}/menu` with localized category and item content.
+- Admin SPA at `/admin` for settings, categories, entries, variants, extras, images, opening hours, publishing, and translations.
+- Optional AI chat assistant that can recommend items from the current menu.
+- Privacy-safe catalog view tracking for basic analytics.
+- Cloudflare Access admin auth, so there is no in-app password system to run.
+- Single-tenant deployment model designed for one restaurant per stack.
+
 ## Status
 
-Source-available. Single-tenant. The multi-tenant version of this repo lived
-through April 2026; the single-tenant collapse happened on `main`.
+Source-available. Single-tenant. The older multi-tenant version lived through April 2026; `main` is now the simplified single-tenant app.
 
 ## License
 
@@ -53,17 +55,18 @@ service, embedding it in a paid product) requires a separate license. See
 |---|---|
 | `web/` | Next.js 16 (App Router), deployed to Cloudflare Pages |
 | `backend/` | Hono API on Cloudflare Workers, Drizzle ORM over Cloudflare D1 |
-| `web/workers/chat/` | Separate Cloudflare Worker for the AI chat assistant (SSE streaming, OpenAI tool-calls) |
+| `web/workers/chat/` | Separate Cloudflare Worker for the AI chat assistant with SSE streaming and tool calls |
 | `packages/schemas/` | Shared Zod schemas (`@menu/schemas`) |
-| Auth | Cloudflare Access — admin login via Google/GitHub/email OTP/SAML/etc., JWT verified by backend |
-| Storage | Cloudflare R2 (images), Cloudflare KV (chat menu cache) |
+| Auth | Cloudflare Access with backend JWT verification |
+| Storage | Cloudflare R2 for images and catalog snapshots, Cloudflare KV for the chat menu cache |
 
 ## Self-hosting
 
 Full walkthrough: **[docs/self-hosting.md](docs/self-hosting.md)**.
 
-TL;DR for someone with a Cloudflare account (Zero Trust enabled) ready:
+Prerequisites: Node 22+, npm 10+, Git, and a Cloudflare account with Zero Trust enabled.
 
+Quick local setup:
 ```bash
 git clone https://github.com/vekexasia/risto-menu.git
 cd risto-menu
@@ -71,26 +74,31 @@ cd risto-menu
 npm ci
 cd web/workers/chat && npm ci && cd -
 
-# Create .risto-menu.local.json and generate local config files
+# Create .risto-menu.local.json and generated local config files
 npm run initialize
 
-# If you accepted placeholder IDs, provision D1 + KV, update .risto-menu.local.json, then regenerate
-cd backend && npx wrangler d1 create menu-db
-cd ../web/workers/chat && npx wrangler kv namespace create MENU_CACHE
-cd ../../.. && npm run config:generate
+# If you accepted placeholder IDs, provision Cloudflare resources, update
+# .risto-menu.local.json, then regenerate
+(cd backend && npx wrangler d1 create menu-db)
+(cd web/workers/chat && npx wrangler kv namespace create MENU_CACHE)
+npm run config:generate
 
-# Apply migrations and run
-cd backend && npx wrangler d1 migrations apply menu-db --local && npm run dev
-# new terminal:
+# Apply local migrations
+(cd backend && npx wrangler d1 migrations apply menu-db --local)
+
+# Terminal 1: backend API
+cd backend && npm run dev
+
+# Terminal 2: chat worker
 cd web/workers/chat && npm run dev
-# new terminal:
+
+# Terminal 3: frontend
 cd web && npm run dev
 ```
 
-Open <http://localhost:3000/admin> (in production, Cloudflare Access redirects you to login)
-and edit your menu. The first time you run the backend migration it seeds a
-default `settings` row with name "My Restaurant" — change it under
-`/admin?s=settings`.
+Open the frontend dev server's `/en/menu` path for the diner menu.
+
+For admin work, production uses Cloudflare Access at `/admin`. In local dev, either point `NEXT_PUBLIC_API_URL` at a deployed backend or use the Playwright admin bypass described in [docs/self-hosting.md](docs/self-hosting.md#8-run-locally). The first migration seeds a `settings` row named "My Restaurant"; change it from `/admin?s=settings`.
 
 ## Common commands
 
