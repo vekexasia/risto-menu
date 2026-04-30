@@ -70,6 +70,9 @@
     "chipVegetarian": "Вегетарианское",
     "chipNoDairy": "Без молочного",
     "chipQuickLunch": "Быстрый обед",
-    "chipBestForKids": "Для детей"
+    "chipBestForKids": "Для детей",
+    "emptyGreeting": "Привет, я Tony. Спросите меня о меню, винных сочетаниях, аллергенах или что заказать.",
+    "inputPlaceholder": "Спросите Tony о меню...",
+    "confirmSelection": "Подтвердить"
   }
 }

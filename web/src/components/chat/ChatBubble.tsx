@@ -6,6 +6,7 @@ import type { ChatMessage } from '@/lib/chat-types';
 import { useRestaurantStore } from '@/stores/restaurantStore';
 import type { MenuEntry } from '@/lib/types';
 import { getContentDisplayText, getLocalizedContentValue } from '@/lib/content-presentation';
+import { useTranslations } from '@/lib/i18n';
 
 interface ChatBubbleProps {
   message: ChatMessage;
@@ -105,6 +106,7 @@ function ChoiceButtons({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const isMulti = choices?.mode === 'multi';
 
+  const t = useTranslations('chat');
   const handleClick = useCallback((option: string) => {
     if (answered) return;
     if (!isMulti) {
@@ -160,7 +162,7 @@ function ChoiceButtons({
           onClick={handleConfirm}
           className="mt-2 px-4 py-1.5 rounded-full text-xs font-medium bg-primary text-white hover:opacity-90 active:scale-95 transition-all"
         >
-          Conferma ({selected.size})
+          {t('confirmSelection')} ({selected.size})
         </button>
       )}
     </div>

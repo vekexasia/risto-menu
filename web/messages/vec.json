@@ -70,6 +70,9 @@
     "chipVegetarian": "Vegetarian",
     "chipNoDairy": "Sensa latecini",
     "chipQuickLunch": "Pranzo veloce",
-    "chipBestForKids": "Par putei"
+    "chipBestForKids": "Par putei",
+    "emptyGreeting": "Ciao, son Tony. Domàndame consigli sul menù, vin, alergeni o cossa ordinar.",
+    "inputPlaceholder": "Domanda a Tony sul menù...",
+    "confirmSelection": "Conferma"
   }
 }

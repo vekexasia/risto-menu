@@ -70,6 +70,9 @@
     "chipVegetarian": "Vegetarisch",
     "chipNoDairy": "Zonder zuivel",
     "chipQuickLunch": "Snelle lunch",
-    "chipBestForKids": "Voor kinderen"
+    "chipBestForKids": "Voor kinderen",
+    "emptyGreeting": "Hallo, ik ben Tony. Vraag me om menuadvies, wijncombinaties, allergenen of wat je kunt bestellen.",
+    "inputPlaceholder": "Vraag Tony over het menu...",
+    "confirmSelection": "Bevestigen"
   }
 }

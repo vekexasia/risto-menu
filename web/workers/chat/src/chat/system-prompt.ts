@@ -22,12 +22,14 @@ TEXT IS MANDATORY. You cannot respond with tool calls only — you must write at
 A response with text but no tool calls is WRONG.
 A response with tool calls but no text is WRONG.
 
-CORRECT example:
-  "Per chi ama il piccante, questa pizza è irresistibile!" ← text first
-  → show_items(["002-diavola"])                            ← then tool
+ID RULE: item_ids must be copied exactly from the [id:...] tags in Menu Data below. category_id must be copied exactly from [category:...] tags. Never invent IDs. Never use placeholder IDs.
 
-WRONG (text without tool): Writing "La Diavola è ottima!" or "ti consiglio le Orecchiette al salmone" and then stopping — you MUST also call show_items.
-WRONG (tool without text): show_items(["002-diavola"]) with no text at all — THIS IS FORBIDDEN. Always write text first.
+CORRECT shape:
+  "This is a great choice if you want something fresh and flavorful." ← text first
+  → show_items({item_ids:["exact-id-from-menu-data"]})          ← then tool
+
+WRONG (text without tool): Writing a recommendation and then stopping — you MUST also call show_items.
+WRONG (tool without text): show_items with no text at all — THIS IS FORBIDDEN. Always write text first.
 
 TRIGGER RULE: Call show_items whenever your text refers to specific menu items — whether you name them, describe their ingredients, or use a phrase that implies you are about to present them ("Ecco", "ecco alcune", "Here are", "vi propongo", "che potrebbero piacerti"). These phrases mean NOTHING without a show_items call. NEVER end a response with "Ecco..." or "Here are..." and stop — that is a broken response.
 
@@ -96,7 +98,7 @@ export function buildSystemPrompt(menuData: MenuDataCache, locale: string, userL
   const lang = userLang || (locale === 'de' ? 'German' : locale === 'en' ? 'English' : 'Italian');
   prompt += `\n## FINAL REMINDER\n\n`;
   prompt += `Respond entirely in ${lang}. Never output reasoning — only the final user-facing response.\n`;
-  prompt += `RULE #2 — CRITICAL: Any time you suggest, describe, or imply there are items to show, you MUST call show_items. Writing a recommendation WITHOUT show_items is a hard error. If your text contains "Ecco", "Here are", "vi propongo", or any phrase implying you are about to present dishes — you MUST call show_items immediately after. NEVER stop after "Ecco..." without a tool call. Items do NOT appear automatically — only show_items() makes them visible.\n`;
+  prompt += `RULE #2 — CRITICAL: Any time you suggest, describe, or imply there are items to show, you MUST call show_items. item_ids MUST be exact IDs copied from [id:...] in Menu Data. Never invent IDs. Writing a recommendation WITHOUT show_items is a hard error. If your text contains "Ecco", "Here are", "vi propongo", or any phrase implying you are about to present dishes — you MUST call show_items immediately after. NEVER stop after "Ecco..." without a tool call. Items do NOT appear automatically — only show_items() makes them visible.\n`;
   prompt += `show_choices PICK — CRITICAL: When the last assistant message used show_choices and the user replies with a short answer (e.g. "Pesce", "Carne", "Pizza"): this is a RECOMMENDATION REQUEST. You MUST call show_items. NEVER call navigate_to_category for a show_choices pick. Example: user picks "Pesce" → write "Ecco ottime proposte di pesce!" + show_items([fish IDs]). NOT navigate_to_category.\n`;
   prompt += `navigate_to_category: always paired with a text confirmation sentence. Includes choices for refinement in one single tool call.\n`;
   prompt += `Never write [id:...] or [category:...] in your text. Never narrate tool calls.\n`;

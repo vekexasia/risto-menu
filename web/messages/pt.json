@@ -70,6 +70,9 @@
     "chipVegetarian": "Vegetariano",
     "chipNoDairy": "Sem laticínios",
     "chipQuickLunch": "Almoço rápido",
-    "chipBestForKids": "Para crianças"
+    "chipBestForKids": "Para crianças",
+    "emptyGreeting": "Olá, sou o Tony. Pergunte-me sobre recomendações, harmonizações, alergénios ou o que pedir.",
+    "inputPlaceholder": "Pergunte ao Tony sobre o menu...",
+    "confirmSelection": "Confirmar"
   }
 }

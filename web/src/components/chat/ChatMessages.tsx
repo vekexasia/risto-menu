@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useChatMessages, useChatStore } from '@/stores/chatStore';
 import { ChatBubble } from './ChatBubble';
 import type { MenuEntry } from '@/lib/types';
+import { useTranslations } from '@/lib/i18n';
 
 interface ChatMessagesProps {
   locale: string;
@@ -15,6 +16,7 @@ export function ChatMessages({ locale, onItemClick, onChoiceSelect }: ChatMessag
   const messages = useChatMessages();
   const currentStreamId = useChatStore(s => s.currentStreamId);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations('chat');
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -27,7 +29,7 @@ export function ChatMessages({ locale, onItemClick, onChoiceSelect }: ChatMessag
         <div>
           <div className="text-4xl mb-3">👋</div>
           <p className="text-gray-500 text-sm">
-            Ciao! Chiedimi del menu, allergie, o consigli su cosa ordinare.
+            {t('emptyGreeting')}
           </p>
         </div>
       </div>

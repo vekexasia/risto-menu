@@ -70,6 +70,9 @@
     "chipVegetarian": "Vegetarian",
     "chipNoDairy": "No dairy",
     "chipQuickLunch": "Quick lunch",
-    "chipBestForKids": "Best for kids"
+    "chipBestForKids": "Best for kids",
+    "emptyGreeting": "Hi, I am Tony. Ask me for menu advice, wine pairings, allergens, or what to order.",
+    "inputPlaceholder": "Ask Tony about the menu...",
+    "confirmSelection": "Confirm"
   }
 }

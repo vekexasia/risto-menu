@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useIsChatStreaming } from '@/stores/chatStore';
+import { useTranslations } from '@/lib/i18n';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -11,6 +12,7 @@ interface ChatInputProps {
 export function ChatInput({ onSend, onCancel }: ChatInputProps) {
   const [value, setValue] = useState('');
   const isStreaming = useIsChatStreaming();
+  const t = useTranslations('chat');
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
@@ -33,7 +35,7 @@ export function ChatInput({ onSend, onCancel }: ChatInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Scrivi un messaggio..."
+        placeholder={t('inputPlaceholder')}
         className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-primary/30"
         disabled={isStreaming}
       />

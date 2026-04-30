@@ -9,7 +9,7 @@ export const TOOLS: ToolDefinition[] = [
       {
         name: 'item_ids',
         type: 'string[]',
-        description: 'Array of item IDs extracted from [id:xxx] brackets in the menu data. Example: if menu shows "Pizza Margherita [id:abc123]", use "abc123".',
+        description: 'Array of exact item IDs copied from [id:...] brackets in the menu data. Copy the real ID verbatim. Never invent IDs and never use placeholder/example IDs.',
         required: true,
       },
     ],
@@ -21,7 +21,7 @@ export const TOOLS: ToolDefinition[] = [
       {
         name: 'category_id',
         type: 'string',
-        description: 'The category ID from [category:xxx] brackets in the menu data. Use only the ID, never the category name.',
+        description: 'The exact category ID copied from a [category:...] bracket in the menu data. Copy the real ID verbatim; never translate it and never use the category name.',
         required: true,
       },
       {
