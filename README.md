@@ -22,9 +22,9 @@ Try the public demo: **https://risto-menu.andreabaccega.com**
 The demo is editable and public. Data resets automatically, so do not enter real customer data.
 Tony, the menu assistant, is enabled with a daily usage cap for the demo.
 
-![Risto Menu public menu](docs/assets/demo-menu.jpg)
+![Risto Menu mobile public menu](docs/assets/demo-mobile-menu.jpg)
 
-![Risto Menu item detail](docs/assets/demo-item-detail.jpg)
+![Risto Menu desktop admin](docs/assets/demo-admin-desktop.jpg)
 
 ## Status
 
