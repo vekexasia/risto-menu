@@ -19,7 +19,7 @@ describe('demo reset', () => {
 
     expect(settings).toEqual({ name: 'Trattoria Demo', publication_state: 'published' });
     expect(visitorEntry).toBeUndefined();
-    expect(demoEntry).toEqual({ name: 'Ravioli ricotta e spinaci' });
+    expect(demoEntry).toEqual({ name: 'Ricotta and spinach ravioli' });
   });
 
   it('exposes a demo-only reset endpoint', async () => {

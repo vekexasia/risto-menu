@@ -59,30 +59,30 @@ const settings = {
 };
 
 const menus = [
-  { id: 'demo-menu-seated', code: 'seated', title: 'Menu al tavolo', i18n: { en: { title: 'Table menu' }, de: { title: 'Speisekarte' }, fr: { title: 'Menu à table' } } },
-  { id: 'demo-menu-drinks', code: 'takeaway', title: 'Drink list', i18n: { it: { title: 'Bevande' }, en: { title: 'Drinks' } } },
+  { id: 'demo-menu-seated', code: 'seated', title: 'Table menu', i18n: { it: { title: 'Menu al tavolo' }, de: { title: 'Speisekarte' }, fr: { title: 'Menu à table' } } },
+  { id: 'demo-menu-drinks', code: 'takeaway', title: 'Drinks', i18n: { it: { title: 'Bevande' } } },
 ];
 
 const categories = [
-  { id: 'demo-cat-starters', menuId: 'demo-menu-seated', name: 'Antipasti', sortOrder: 0, i18n: { en: { name: 'Starters' }, de: { name: 'Vorspeisen' }, fr: { name: 'Entrées' } } },
-  { id: 'demo-cat-pasta', menuId: 'demo-menu-seated', name: 'Primi', sortOrder: 1, i18n: { en: { name: 'Pasta' }, de: { name: 'Pasta' }, fr: { name: 'Pâtes' } } },
-  { id: 'demo-cat-mains', menuId: 'demo-menu-seated', name: 'Secondi', sortOrder: 2, i18n: { en: { name: 'Main courses' }, de: { name: 'Hauptgerichte' }, fr: { name: 'Plats principaux' }, vec: { name: 'Secondi' } } },
-  { id: 'demo-cat-desserts', menuId: 'demo-menu-seated', name: 'Dolci', sortOrder: 3, i18n: { en: { name: 'Desserts' }, de: { name: 'Desserts' }, fr: { name: 'Desserts' } } },
-  { id: 'demo-cat-wines', menuId: 'demo-menu-drinks', name: 'Vini al calice', sortOrder: 0, i18n: { en: { name: 'Wine by the glass' }, de: { name: 'Wein im Glas' }, fr: { name: 'Vins au verre' } } },
+  { id: 'demo-cat-starters', menuId: 'demo-menu-seated', name: 'Starters', sortOrder: 0, i18n: { it: { name: 'Antipasti' }, de: { name: 'Vorspeisen' }, fr: { name: 'Entrées' } } },
+  { id: 'demo-cat-pasta', menuId: 'demo-menu-seated', name: 'Pasta', sortOrder: 1, i18n: { it: { name: 'Primi' }, de: { name: 'Pasta' }, fr: { name: 'Pâtes' } } },
+  { id: 'demo-cat-mains', menuId: 'demo-menu-seated', name: 'Main courses', sortOrder: 2, i18n: { it: { name: 'Secondi' }, de: { name: 'Hauptgerichte' }, fr: { name: 'Plats principaux' }, vec: { name: 'Secondi' } } },
+  { id: 'demo-cat-desserts', menuId: 'demo-menu-seated', name: 'Desserts', sortOrder: 3, i18n: { it: { name: 'Dolci' }, de: { name: 'Desserts' }, fr: { name: 'Desserts' } } },
+  { id: 'demo-cat-wines', menuId: 'demo-menu-drinks', name: 'Wine by the glass', sortOrder: 0, i18n: { it: { name: 'Vini al calice' }, de: { name: 'Wein im Glas' }, fr: { name: 'Vins au verre' } } },
 ];
 
 const entries = [
   {
     id: 'demo-entry-bruschetta',
     categoryId: 'demo-cat-starters',
-    name: 'Bruschetta al pomodoro',
-    description: 'Pane tostato, pomodorini, basilico e olio extravergine.',
+    name: 'Tomato bruschetta',
+    description: 'Toasted bread, cherry tomatoes, basil and extra virgin olive oil.',
     price: 750,
     imageUrl: '/demo-images/bruschetta.jpg',
     sortOrder: 0,
     allergens: ['Glutine'],
     i18n: {
-      en: { name: 'Tomato bruschetta', desc: 'Toasted bread, cherry tomatoes, basil and extra virgin olive oil.' },
+      it: { name: 'Bruschetta al pomodoro', desc: 'Pane tostato, pomodorini, basilico e olio extravergine.' },
       de: { name: 'Tomaten-Bruschetta', desc: 'Geröstetes Brot, Kirschtomaten, Basilikum und natives Olivenöl extra.' },
       fr: { name: 'Bruschetta à la tomate', desc: 'Pain grillé, tomates cerises, basilic et huile d’olive extra vierge.' },
       vec: { name: 'Bruscheta al pomodoro', desc: 'Pan brustolà, pomodorini, basìlego e ojo bon.' },
@@ -91,14 +91,14 @@ const entries = [
   {
     id: 'demo-entry-carpaccio',
     categoryId: 'demo-cat-starters',
-    name: 'Carpaccio di zucchine',
-    description: 'Zucchine marinate, limone, menta e scaglie di mandorla.',
+    name: 'Zucchini carpaccio',
+    description: 'Marinated zucchini, lemon, mint and almond flakes.',
     price: 950,
     imageUrl: '/demo-images/zucchini.jpg',
     sortOrder: 1,
     allergens: ['Frutta-a-Guscio'],
     i18n: {
-      en: { name: 'Zucchini carpaccio', desc: 'Marinated zucchini, lemon, mint and almond flakes.' },
+      it: { name: 'Carpaccio di zucchine', desc: 'Zucchine marinate, limone, menta e scaglie di mandorla.' },
       de: { name: 'Zucchini-Carpaccio', desc: 'Marinierte Zucchini, Zitrone, Minze und Mandelblättchen.' },
       fr: { name: 'Carpaccio de courgettes', desc: 'Courgettes marinées, citron, menthe et copeaux d’amande.' },
       vec: { name: 'Carpacio de suchine', desc: 'Suchine marinàe, limon, menta e mandorle a scaie.' },
@@ -107,14 +107,14 @@ const entries = [
   {
     id: 'demo-entry-polpo',
     categoryId: 'demo-cat-starters',
-    name: 'Polpo alla griglia',
-    description: 'Polpo croccante con crema di patate, prezzemolo e olio al limone.',
+    name: 'Grilled octopus',
+    description: 'Crispy octopus with potato cream, parsley and lemon oil.',
     price: 1350,
     imageUrl: '/demo-images/polpo.jpg',
     sortOrder: 2,
     allergens: ['Molluschi'],
     i18n: {
-      en: { name: 'Grilled octopus', desc: 'Crispy octopus with potato cream, parsley and lemon oil.' },
+      it: { name: 'Polpo alla griglia', desc: 'Polpo croccante con crema di patate, prezzemolo e olio al limone.' },
       de: { name: 'Gegrillter Oktopus', desc: 'Knuspriger Oktopus mit Kartoffelcreme, Petersilie und Zitronenöl.' },
       fr: { name: 'Poulpe grillé', desc: 'Poulpe croustillant avec crème de pommes de terre, persil et huile au citron.' },
       vec: { name: 'Folpo ai ferri', desc: 'Folpo crocante co crema de patate, persemolo e ojo al limon.' },
@@ -123,14 +123,14 @@ const entries = [
   {
     id: 'demo-entry-burrata',
     categoryId: 'demo-cat-starters',
-    name: 'Burrata, datterini e pesto',
-    description: 'Burrata pugliese con pomodorini dolci, pesto leggero e focaccia croccante.',
+    name: 'Burrata, cherry tomatoes and pesto',
+    description: 'Apulian burrata with sweet cherry tomatoes, light pesto and crisp focaccia.',
     price: 1200,
     imageUrl: '/demo-images/burrata.jpg',
     sortOrder: 3,
     allergens: ['Latte-e-Derivati', 'Glutine', 'Frutta-a-Guscio'],
     i18n: {
-      en: { name: 'Burrata, cherry tomatoes and pesto', desc: 'Apulian burrata with sweet cherry tomatoes, light pesto and crisp focaccia.' },
+      it: { name: 'Burrata, datterini e pesto', desc: 'Burrata pugliese con pomodorini dolci, pesto leggero e focaccia croccante.' },
       de: { name: 'Burrata, Datteltomaten und Pesto', desc: 'Burrata aus Apulien mit süßen Kirschtomaten, leichtem Pesto und knuspriger Focaccia.' },
       fr: { name: 'Burrata, tomates cerises et pesto', desc: 'Burrata des Pouilles avec tomates cerises douces, pesto léger et focaccia croustillante.' },
       vec: { name: 'Burrata, datterini e pesto', desc: 'Burrata pugliese co pomodorini dolsi, pesto liziero e focaccia crocante.' },
@@ -139,14 +139,14 @@ const entries = [
   {
     id: 'demo-entry-ravioli',
     categoryId: 'demo-cat-pasta',
-    name: 'Ravioli ricotta e spinaci',
-    description: 'Ravioli fatti in casa con burro e salvia.',
+    name: 'Ricotta and spinach ravioli',
+    description: 'Homemade ravioli with butter and sage.',
     price: 1450,
     imageUrl: '/demo-images/ravioli.jpg',
     sortOrder: 0,
     allergens: ['Glutine', 'Uova', 'Latte-e-Derivati'],
     i18n: {
-      en: { name: 'Ricotta and spinach ravioli', desc: 'Homemade ravioli with butter and sage.' },
+      it: { name: 'Ravioli ricotta e spinaci', desc: 'Ravioli fatti in casa con burro e salvia.' },
       de: { name: 'Ravioli mit Ricotta und Spinat', desc: 'Hausgemachte Ravioli mit Butter und Salbei.' },
       fr: { name: 'Ravioli ricotta-épinards', desc: 'Ravioli maison au beurre et à la sauge.' },
       vec: { name: 'Ravioli ricota e spinasi', desc: 'Ravioli fati in casa co buro e salvia.' },
@@ -155,14 +155,14 @@ const entries = [
   {
     id: 'demo-entry-spaghetti',
     categoryId: 'demo-cat-pasta',
-    name: 'Spaghetti alle vongole',
-    description: 'Spaghetti con vongole, aglio, prezzemolo e vino bianco.',
+    name: 'Spaghetti with clams',
+    description: 'Spaghetti with clams, garlic, parsley and white wine.',
     price: 1650,
     imageUrl: '/demo-images/spaghetti.jpg',
     sortOrder: 1,
     allergens: ['Glutine', 'Molluschi', 'Anidride-Solforosa-e-Solfiti'],
     i18n: {
-      en: { name: 'Spaghetti with clams', desc: 'Spaghetti with clams, garlic, parsley and white wine.' },
+      it: { name: 'Spaghetti alle vongole', desc: 'Spaghetti con vongole, aglio, prezzemolo e vino bianco.' },
       de: { name: 'Spaghetti mit Venusmuscheln', desc: 'Spaghetti mit Muscheln, Knoblauch, Petersilie und Weißwein.' },
       fr: { name: 'Spaghetti aux palourdes', desc: 'Spaghetti aux palourdes, ail, persil et vin blanc.' },
       vec: { name: 'Spaghetti co le vongole', desc: 'Spaghetti co vongole, ajo, persemolo e vin bianco.' },
@@ -171,14 +171,14 @@ const entries = [
   {
     id: 'demo-entry-branzino',
     categoryId: 'demo-cat-mains',
-    name: 'Filetto di branzino',
-    description: 'Branzino al forno con verdure di stagione, limone e timo.',
+    name: 'Sea bass fillet',
+    description: 'Baked sea bass with seasonal vegetables, lemon and thyme.',
     price: 2150,
     imageUrl: '/demo-images/branzino.jpg',
     sortOrder: 0,
     allergens: ['Pesce'],
     i18n: {
-      en: { name: 'Sea bass fillet', desc: 'Baked sea bass with seasonal vegetables, lemon and thyme.' },
+      it: { name: 'Filetto di branzino', desc: 'Branzino al forno con verdure di stagione, limone e timo.' },
       de: { name: 'Wolfsbarschfilet', desc: 'Gebackener Wolfsbarsch mit Saisongemüse, Zitrone und Thymian.' },
       fr: { name: 'Filet de bar', desc: 'Bar au four avec légumes de saison, citron et thym.' },
       vec: { name: 'Fileto de branzin', desc: 'Branzin al forno co verdure de stagion, limon e timo.' },
@@ -187,14 +187,14 @@ const entries = [
   {
     id: 'demo-entry-tagliata',
     categoryId: 'demo-cat-mains',
-    name: 'Tagliata di manzo',
-    description: 'Manzo scottato, rucola, scaglie di grana e riduzione al balsamico.',
+    name: 'Sliced beef tagliata',
+    description: 'Seared beef with arugula, parmesan flakes and balsamic reduction.',
     price: 2400,
     imageUrl: '/demo-images/tagliata.jpg',
     sortOrder: 1,
     allergens: ['Latte-e-Derivati'],
     i18n: {
-      en: { name: 'Sliced beef tagliata', desc: 'Seared beef with arugula, parmesan flakes and balsamic reduction.' },
+      it: { name: 'Tagliata di manzo', desc: 'Manzo scottato, rucola, scaglie di grana e riduzione al balsamico.' },
       de: { name: 'Rindertagliata', desc: 'Kurz gebratenes Rindfleisch mit Rucola, Parmesan und Balsamico-Reduktion.' },
       fr: { name: 'Tagliata de bœuf', desc: 'Bœuf saisi, roquette, copeaux de parmesan et réduction balsamique.' },
       vec: { name: 'Taiata de manzo', desc: 'Manzo scotà, rucola, scaie de grana e ridusion al balsamico.' },
@@ -203,14 +203,14 @@ const entries = [
   {
     id: 'demo-entry-tiramisu',
     categoryId: 'demo-cat-desserts',
-    name: 'Tiramisù della casa',
-    description: 'Mascarpone, caffè e cacao.',
+    name: 'House tiramisu',
+    description: 'Mascarpone, coffee and cocoa.',
     price: 650,
     imageUrl: '/demo-images/tiramisu.jpg',
     sortOrder: 0,
     allergens: ['Uova', 'Latte-e-Derivati', 'Glutine'],
     i18n: {
-      en: { name: 'House tiramisu', desc: 'Mascarpone, coffee and cocoa.' },
+      it: { name: 'Tiramisù della casa', desc: 'Mascarpone, caffè e cacao.' },
       de: { name: 'Hausgemachtes Tiramisù', desc: 'Mascarpone, Kaffee und Kakao.' },
       fr: { name: 'Tiramisu maison', desc: 'Mascarpone, café et cacao.' },
       vec: { name: 'Tiramisù de casa', desc: 'Mascarpone, cafè e cacao.' },
@@ -220,13 +220,13 @@ const entries = [
     id: 'demo-entry-prosecco',
     categoryId: 'demo-cat-wines',
     name: 'Prosecco Brut',
-    description: 'Calice di prosecco fresco e floreale.',
+    description: 'A fresh and floral glass of prosecco.',
     price: 550,
     imageUrl: '/demo-images/prosecco.jpg',
     sortOrder: 0,
     allergens: ['Anidride-Solforosa-e-Solfiti'],
     i18n: {
-      en: { name: 'Prosecco Brut', desc: 'A fresh and floral glass of prosecco.' },
+      it: { name: 'Prosecco Brut', desc: 'Calice di prosecco fresco e floreale.' },
       de: { name: 'Prosecco Brut', desc: 'Ein frisches, blumiges Glas Prosecco.' },
       fr: { name: 'Prosecco Brut', desc: 'Un verre de prosecco frais et floral.' },
       vec: { name: 'Prosecco Brut', desc: 'Un calice de prosecco fresco e fiorìo.' },
@@ -235,11 +235,11 @@ const entries = [
 ];
 
 const variants = [
-  { id: 'demo-variant-pasta-size', name: 'Porzione', description: 'Scegli la dimensione', sortOrder: 0, selections: [{ id: 'regular', name: 'Normale', price: 0 }, { id: 'large', name: 'Abbondante', price: 300 }], i18n: { en: { name: 'Portion', desc: 'Choose the size' } } },
+  { id: 'demo-variant-pasta-size', name: 'Portion', description: 'Choose the size', sortOrder: 0, selections: [{ id: 'regular', name: 'Regular', price: 0, i18n: { it: { name: 'Normale' } } }, { id: 'large', name: 'Large', price: 300, i18n: { it: { name: 'Abbondante' } } }], i18n: { it: { name: 'Porzione', desc: 'Scegli la dimensione' } } },
 ];
 
 const extras = [
-  { id: 'demo-extra-bread', name: 'Pane extra', type: 'zeroorone', max: 1, options: [{ id: 'bread', name: 'Pane extra', price: 150 }], i18n: { en: { name: 'Extra bread' } } },
+  { id: 'demo-extra-bread', name: 'Extra bread', type: 'zeroorone', max: 1, options: [{ id: 'bread', name: 'Extra bread', price: 150, i18n: { it: { name: 'Pane extra' } } }], i18n: { it: { name: 'Pane extra' } } },
 ];
 
 export async function resetDemoData(env: Env): Promise<void> {
