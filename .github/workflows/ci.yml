@@ -65,12 +65,13 @@ jobs:
       - run: npm --workspace web run build:cf
         env:
           NEXT_PUBLIC_API_URL: https://risto-menu-api.andreabaccega.com
-          NEXT_PUBLIC_CHAT_WORKER_URL: ""
+          NEXT_PUBLIC_CHAT_WORKER_URL: https://risto-menu-demo-chat.vekexasia.workers.dev
           NEXT_PUBLIC_DEFAULT_LOCALE: it
-      - name: Assert demo build has no chat bundle
+      - name: Assert demo build has Tony and no private chat URL
         run: |
-          ! grep -R "https://menu-chat\|http://localhost\|http://127\.0\.0\.1\|:8787\|:8788" web/out/_next/static
-          ! grep -R "Tony" web/out/_next/static
+          grep -R "https://risto-menu-demo-chat.vekexasia.workers.dev" web/out/_next/static
+          ! grep -R "http://localhost\|http://127\.0\.0\.1\|:8787\|:8788" web/out/_next/static
+          grep -R "Tony" web/out/_next/static
 
   chat-test:
     name: Chat worker tests

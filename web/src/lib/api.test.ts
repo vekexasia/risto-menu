@@ -7,6 +7,34 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// ── getCatalog ───────────────────────────────────────────────────────────────
+describe('getCatalog', () => {
+  const ORIG_API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_URL = 'https://api.test';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ restaurant: {}, menus: [], variants: [], extras: [] }), { status: 200 })));
+  });
+
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_API_URL = ORIG_API_URL;
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it('cache-busts public catalog requests so admin edits are visible immediately', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-30T12:00:00Z'));
+    try {
+      const { getCatalog } = await import('./api');
+      await getCatalog();
+      expect(fetch).toHaveBeenCalledWith('https://api.test/catalog?t=1777550400000', expect.any(Object));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 // ── recordView ─────────────────────────────────────────────────────────────────
 
 describe('recordView', () => {

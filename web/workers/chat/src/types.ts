@@ -7,6 +7,7 @@ export interface Env {
   ANTHROPIC_API_KEY: string;
   OPENAI_API_KEY: string;
   REFRESH_SECRET: string;
+  DEMO_MODE?: string;
 }
 
 export interface ChatMessage {

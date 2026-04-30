@@ -104,6 +104,10 @@ export async function handleChat(request: Request, env: Env, corsHeaders: Record
     });
   }
 
+  if (env.DEMO_MODE === 'true') {
+    return createDemoChatResponse(menuData, locale, corsHeaders);
+  }
+
   const systemPrompt = buildSystemPrompt(menuData, locale, userLang);
   console.log(`[CHAT] ${ip} | system prompt: ${systemPrompt.length} chars, ~${Math.ceil(systemPrompt.length / 4)} tokens`);
   const provider = createProvider(env);
@@ -231,6 +235,24 @@ function detectUserLanguage(messages: Array<{ role: string; content: string }>):
 
   // If no clear signal, fall back to Italian
   return best[1] > 0 ? best[0] : 'Italian';
+}
+
+function createDemoChatResponse(menuData: MenuDataCache, locale: string, corsHeaders: Record<string, string>): Response {
+  const entries = menuData.categories.flatMap((category) => category.entries).filter((entry) => !entry.outOfStock);
+  const shown = entries.slice(0, 3);
+  const intro = locale === 'it'
+    ? 'Ciao, sono Tony. Questa demo usa risposte guidate: posso consigliarti alcuni piatti dal menu.'
+    : 'Hi, I am Tony. This demo uses guided replies: here are a few dishes from the menu.';
+
+  const events = [
+    encodeTextEvent(`${intro}\n\n`),
+    shown.length > 0 ? encodeToolCallEvent({ name: 'show_items', params: { item_ids: shown.map((entry) => entry.id) } }) : '',
+    encodeDoneEvent(),
+  ].join('');
+
+  return new Response(events, {
+    headers: { ...sseHeaders(), ...corsHeaders },
+  });
 }
 
 function createServerToolResolver(menuData: MenuDataCache, locale: string) {

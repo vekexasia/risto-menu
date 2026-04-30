@@ -14,6 +14,9 @@ env:
   DEMO_WEB_DOMAIN: https://risto-menu.andreabaccega.com
   DEMO_PAGES_DOMAIN: https://risto-menu-demo.pages.dev
   DEMO_API_DOMAIN: https://risto-menu-api.andreabaccega.com
+  DEMO_CHAT_DOMAIN: https://risto-menu-demo-chat.vekexasia.workers.dev
+  DEMO_CHAT_NAME: risto-menu-demo-chat
+  DEMO_CHAT_KV_NAMESPACE_ID: 705f0360cf374bb2b67f4f76b2937dea
   DEMO_BACKEND_NAME: risto-menu-demo-api
   DEMO_PAGES_PROJECT: risto-menu-demo
   DEMO_D1_DATABASE_NAME: risto-menu-demo-db
@@ -34,6 +37,10 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        run: npm ci
+
+      - name: Install chat worker dependencies
+        working-directory: web/workers/chat
         run: npm ci
 
       - name: Backend checks
@@ -92,11 +99,43 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.demo.toml
 
+      - name: Write demo chat config
+        working-directory: web/workers/chat
+        run: |
+          cat > wrangler.demo.toml <<EOF
+          name = "${DEMO_CHAT_NAME}"
+          main = "src/index.ts"
+          compatibility_date = "2024-12-01"
+
+          [[kv_namespaces]]
+          binding = "MENU_CACHE"
+          id = "${DEMO_CHAT_KV_NAMESPACE_ID}"
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "${DEMO_D1_DATABASE_NAME}"
+          database_id = "${{ vars.DEMO_D1_DATABASE_ID }}"
+          migrations_dir = "../../../backend/drizzle"
+
+          [vars]
+          DEMO_MODE = "true"
+          CHAT_SESSION_SECRET = "${{ secrets.DEMO_CHAT_SESSION_SECRET }}"
+          ALLOWED_ORIGINS = "${DEMO_WEB_DOMAIN},${DEMO_PAGES_DOMAIN}"
+          ALLOWED_HOST_SUFFIXES = ".pages.dev"
+          EOF
+
+      - name: Deploy demo chat worker
+        working-directory: web/workers/chat
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.demo.toml
+
       - name: Build demo frontend
         working-directory: web
         env:
           NEXT_PUBLIC_API_URL: ${{ env.DEMO_API_DOMAIN }}
-          NEXT_PUBLIC_CHAT_WORKER_URL: ""
+          NEXT_PUBLIC_CHAT_WORKER_URL: ${{ env.DEMO_CHAT_DOMAIN }}
           NEXT_PUBLIC_DEFAULT_LOCALE: it
         run: npm run build:cf
 
@@ -129,8 +168,9 @@ jobs:
           curl --fail --retry 10 --retry-delay 6 "${DEMO_PAGES_DOMAIN}/it/menu/" -o /tmp/menu.html
           grep -q "_next/static" /tmp/menu.html
           grep -R "${DEMO_API_DOMAIN}" web/out/_next/static
-          ! grep -R "https://menu-chat\|http://localhost\|http://127\.0\.0\.1\|:8787\|:8788" web/out/_next/static
-          ! grep -R "Tony" web/out/_next/static
+          grep -R "${DEMO_CHAT_DOMAIN}" web/out/_next/static
+          ! grep -R "http://localhost\|http://127\.0\.0\.1\|:8787\|:8788" web/out/_next/static
+          grep -R "Tony" web/out/_next/static
 
       - name: Demo URLs
         run: |

@@ -85,9 +85,9 @@ export class ApiError extends Error {
 
 // ── Public API ───────────────────────────────────────────────────────
 
-/** Fetch the full catalog (public, cached). */
+/** Fetch the full public catalog. Cache-bust so admin edits are visible immediately. */
 export function getCatalog() {
-  return apiFetch<CatalogResponse>(`/catalog`);
+  return apiFetch<CatalogResponse>(`/catalog?t=${Date.now()}`);
 }
 
 /** Fetch an authenticated admin catalog preview, including draft/hidden items. */
