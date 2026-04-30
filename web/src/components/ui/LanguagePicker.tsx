@@ -166,10 +166,52 @@ export function LanguagePicker({ variant = 'floating' }: LanguagePickerProps = {
     </ul>
   );
 
+  const toggleButton = (
+    <button
+      type="button"
+      aria-haspopup="menu"
+      aria-expanded={open}
+      aria-label="Select language"
+      onClick={() => setOpen((value) => !value)}
+      className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-lg"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.8}
+        stroke="currentColor"
+        className="h-4 w-4 text-gray-500"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 21a9 9 0 1 0 0-18m0 18c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.966 8.966 0 0 1 7.5 4.032M12 3a8.966 8.966 0 0 0-7.5 4.032m15 0A8.959 8.959 0 0 1 21 12c0 1.61-.424 3.12-1.167 4.425M4.5 7.032A8.959 8.959 0 0 0 3 12c0 1.61.424 3.12 1.167 4.425M19.833 16.425A8.944 8.944 0 0 1 12 21a8.944 8.944 0 0 1-7.833-4.575"
+        />
+      </svg>
+      <span>{currentLanguage.label}</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={2}
+        stroke="currentColor"
+        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+      </svg>
+    </button>
+  );
+
   if (variant === 'inline') {
     return (
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        {list}
+      <div className="relative inline-block" ref={containerRef}>
+        {toggleButton}
+        {open && (
+          <div className="absolute top-full left-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+            {list}
+          </div>
+        )}
       </div>
     );
   }
@@ -183,40 +225,7 @@ export function LanguagePicker({ variant = 'floating' }: LanguagePickerProps = {
           </div>
         )}
 
-        <button
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-label="Select language"
-          onClick={() => setOpen((value) => !value)}
-          className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-lg"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.8}
-            stroke="currentColor"
-            className="h-4 w-4 text-gray-500"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 21a9 9 0 1 0 0-18m0 18c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.966 8.966 0 0 1 7.5 4.032M12 3a8.966 8.966 0 0 0-7.5 4.032m15 0A8.959 8.959 0 0 1 21 12c0 1.61-.424 3.12-1.167 4.425M4.5 7.032A8.959 8.959 0 0 0 3 12c0 1.61.424 3.12 1.167 4.425M19.833 16.425A8.944 8.944 0 0 1 12 21a8.944 8.944 0 0 1-7.833-4.575"
-            />
-          </svg>
-          <span>{currentLanguage.label}</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
+        {toggleButton}
       </div>
     </div>
   );

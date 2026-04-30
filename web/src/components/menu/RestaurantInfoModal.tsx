@@ -76,8 +76,6 @@ export function RestaurantInfoModal({ restaurant, isOpen, onClose }: RestaurantI
   // Get today's day index (0 = Monday in our array, but Date.getDay() returns 0 = Sunday)
   const todayIndex = (new Date().getDay() + 6) % 7;
 
-  const hasSocials = restaurant.socials?.facebook || restaurant.socials?.instagram || restaurant.socials?.whatsapp;
-
   // Don't render anything if not open (and not in closing animation)
   if (!isOpen && !isClosing) {
     return null;
@@ -154,46 +152,40 @@ export function RestaurantInfoModal({ restaurant, isOpen, onClose }: RestaurantI
 
             {/* Content */}
             <div className="p-6 space-y-6">
-              {/* Social Icons */}
-              {hasSocials && (
-                <div className="flex gap-3">
-                  {restaurant.socials?.facebook && (
-                    <button onClick={openFacebook} className="hover:opacity-80 transition-opacity">
-                      <Image
-                        src="/images/ico-fb.png"
-                        alt="Facebook"
-                        width={32}
-                        height={32}
-                      />
-                    </button>
-                  )}
-                  {restaurant.socials?.instagram && (
-                    <button onClick={openInstagram} className="hover:opacity-80 transition-opacity">
-                      <Image
-                        src="/images/ico-ig.png"
-                        alt="Instagram"
-                        width={32}
-                        height={32}
-                      />
-                    </button>
-                  )}
-                  {restaurant.socials?.whatsapp && (
-                    <button onClick={openWhatsapp} className="hover:opacity-80 transition-opacity">
-                      <Image
-                        src="/images/ico-whatsapp.png"
-                        alt="WhatsApp"
-                        width={32}
-                        height={32}
-                      />
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* LANGUAGE */}
-              <Section title={t('language')}>
+              {/* Social Icons + Language */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {restaurant.socials?.facebook && (
+                  <button onClick={openFacebook} className="hover:opacity-80 transition-opacity">
+                    <Image
+                      src="/images/ico-fb.png"
+                      alt="Facebook"
+                      width={32}
+                      height={32}
+                    />
+                  </button>
+                )}
+                {restaurant.socials?.instagram && (
+                  <button onClick={openInstagram} className="hover:opacity-80 transition-opacity">
+                    <Image
+                      src="/images/ico-ig.png"
+                      alt="Instagram"
+                      width={32}
+                      height={32}
+                    />
+                  </button>
+                )}
+                {restaurant.socials?.whatsapp && (
+                  <button onClick={openWhatsapp} className="hover:opacity-80 transition-opacity">
+                    <Image
+                      src="/images/ico-whatsapp.png"
+                      alt="WhatsApp"
+                      width={32}
+                      height={32}
+                    />
+                  </button>
+                )}
                 <Suspense><LanguagePicker variant="inline" /></Suspense>
-              </Section>
+              </div>
 
               {/* IL RISTORANTE */}
               {restaurant.messages?.intro && (
