@@ -71,14 +71,10 @@ cd risto-menu
 npm ci
 cd web/workers/chat && npm ci && cd -
 
-# Copy env templates and fill in your IDs / keys
-cp backend/wrangler.toml.example          backend/wrangler.toml
-cp backend/.dev.vars.example              backend/.dev.vars
-cp web/.env.local.example                 web/.env.local
-cp web/workers/chat/wrangler.toml.example web/workers/chat/wrangler.toml
-cp web/workers/chat/.dev.vars.example     web/workers/chat/.dev.vars
+# Generate local config files interactively
+npm run initialize
 
-# Provision D1 + KV (commands return IDs to paste back into wrangler.toml)
+# If you accepted placeholder IDs, provision D1 + KV and paste the returned IDs
 cd backend && npx wrangler d1 create menu-db
 cd ../web/workers/chat && npx wrangler kv namespace create MENU_CACHE
 cd ../../..

@@ -1,0 +1,206 @@
+#!/usr/bin/env node
+import { createInterface } from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+const rl = createInterface({ input, output });
+const yes = process.argv.includes('--yes') || process.argv.includes('-y');
+
+function secret() {
+  return randomBytes(32).toString('hex');
+}
+
+async function ask(label, fallback = '', options = {}) {
+  if (yes) return fallback;
+  const suffix = fallback ? ` (${fallback})` : '';
+  const value = (await rl.question(`${label}${suffix}: `)).trim();
+  if (!value && options.required && !fallback) return ask(label, fallback, options);
+  return value || fallback;
+}
+
+async function choose(label, choices, fallback) {
+  if (yes) return fallback;
+  const text = choices.map((c, i) => `${i + 1}) ${c}`).join('  ');
+  const raw = (await rl.question(`${label} ${text} (${fallback}): `)).trim();
+  if (!raw) return fallback;
+  const index = Number(raw);
+  if (Number.isInteger(index) && index >= 1 && index <= choices.length) return choices[index - 1];
+  if (choices.includes(raw)) return raw;
+  console.log(`Please choose one of: ${choices.join(', ')}`);
+  return choose(label, choices, fallback);
+}
+
+async function confirm(label, fallback = false) {
+  if (yes) return fallback;
+  const hint = fallback ? 'Y/n' : 'y/N';
+  const raw = (await rl.question(`${label} (${hint}): `)).trim().toLowerCase();
+  if (!raw) return fallback;
+  return raw === 'y' || raw === 'yes';
+}
+
+function write(path, content, force) {
+  if (existsSync(path) && !force) {
+    console.log(`skip ${path} (already exists)`);
+    return false;
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content);
+  console.log(`${existsSync(path) ? 'wrote' : 'created'} ${path}`);
+  return true;
+}
+
+function csv(values) {
+  return values.filter(Boolean).join(',');
+}
+
+console.log('\nRisto Menu initializer\n');
+console.log('This writes local config files that are gitignored. It does not create Cloudflare resources for you.');
+console.log('If you do not have D1/KV IDs yet, accept the placeholders and run the commands printed at the end.\n');
+
+const force = await confirm('Overwrite existing config files?', false);
+const profile = await choose('Setup profile:', ['local-dev', 'production', 'public-demo'], 'local-dev');
+const isDemo = profile === 'public-demo';
+const isProdLike = profile !== 'local-dev';
+
+const defaultDomain = isProdLike ? 'https://menu.example.com' : 'http://localhost:3000';
+const frontendUrl = await ask('Frontend URL', defaultDomain);
+const apiUrl = await ask('Backend API URL', isProdLike ? 'https://menu-api.example.com' : 'http://localhost:8787');
+const chatUrl = await ask('Chat worker URL', isProdLike ? 'https://menu-chat.example.workers.dev' : 'http://localhost:8788');
+const defaultLocale = await ask('Default locale', 'en');
+
+const backendName = await ask('Backend Worker name', isDemo ? 'risto-menu-demo-api' : 'menu-backend');
+const chatName = await ask('Chat Worker name', isDemo ? 'risto-menu-demo-chat' : 'menu-chat');
+const d1Name = await ask('D1 database name', isDemo ? 'risto-menu-demo-db' : 'menu-db');
+const d1Id = await ask('D1 database id', '00000000-0000-0000-0000-000000000000');
+const kvId = await ask('Chat KV namespace id', '00000000000000000000000000000000');
+const r2PublicUrl = await ask('R2 public URL for images/catalog snapshots', 'https://pub-XXXXXXXX.r2.dev');
+
+let accessTeam = 'https://your-team.cloudflareaccess.com';
+let accessAud = 'your-access-aud-tag';
+let adminEmails = 'you@example.com';
+if (!isDemo) {
+  adminEmails = await ask('Admin email(s), comma-separated', adminEmails);
+  if (isProdLike) {
+    accessTeam = await ask('Cloudflare Access team domain', accessTeam);
+    accessAud = await ask('Cloudflare Access AUD tag', accessAud);
+  }
+}
+
+const llmProvider = await choose('Chat LLM provider:', ['openai', 'anthropic', 'workers-ai'], isDemo ? 'workers-ai' : 'openai');
+const llmModel = llmProvider === 'workers-ai'
+  ? await ask('Workers AI model', '@cf/meta/llama-3.3-70b-instruct-fp8-fast')
+  : llmProvider === 'anthropic'
+    ? await ask('Anthropic model', 'claude-haiku-4-5-20251001')
+    : await ask('OpenAI model', 'gpt-5.4-mini');
+
+const openAiKey = llmProvider === 'openai' ? await ask('OpenAI API key for local dev (blank allowed)', '') : '';
+const anthropicKey = llmProvider === 'anthropic' ? await ask('Anthropic API key for local dev (blank allowed)', '') : '';
+const chatSessionSecret = await ask('Chat session secret', secret());
+const refreshSecret = await ask('Menu refresh/debug secret', secret());
+const dailyLimit = isDemo ? await ask('Daily AI request cap for demo', '200') : '';
+
+const allowedOrigins = isProdLike ? csv([frontendUrl]) : csv(['http://localhost:3000', frontendUrl !== 'http://localhost:3000' ? frontendUrl : '']);
+
+const backendToml = `# Generated by npm run initialize
+name = "${backendName}"
+main = "src/index.ts"
+compatibility_date = "2025-04-11"
+
+[vars]
+APP_ENV = "${isProdLike ? 'production' : 'development'}"
+API_VERSION = "v1"
+SERVICE_NAME = "menu-backend"
+DEMO_MODE = "${isDemo ? 'true' : 'false'}"
+R2_PUBLIC_URL = "${r2PublicUrl}"
+ACCESS_TEAM_DOMAIN = "${accessTeam}"
+ACCESS_AUD = "${accessAud}"
+ADMIN_EMAILS = "${isDemo ? 'demo-admin@risto.menu' : adminEmails}"
+ALLOWED_ORIGINS = "${allowedOrigins}"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "${d1Name}"
+database_id = "${d1Id}"
+migrations_dir = "drizzle"
+${isDemo ? '\n[triggers]\ncrons = ["0 * * * *"]\n' : ''}`;
+
+const backendDevVars = `# Generated by npm run initialize
+# Local-only secrets for backend wrangler dev.
+OPENAI_API_KEY=${openAiKey}
+`;
+
+const chatToml = `# Generated by npm run initialize
+name = "${chatName}"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[kv_namespaces]]
+binding = "MENU_CACHE"
+id = "${kvId}"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "${d1Name}"
+database_id = "${d1Id}"
+migrations_dir = "../../../backend/drizzle"
+${llmProvider === 'workers-ai' ? '\n[ai]\nbinding = "AI"\n' : ''}
+[vars]
+LLM_PROVIDER = "${llmProvider}"
+LLM_MODEL = "${llmModel}"
+ALLOWED_ORIGINS = "${frontendUrl}"
+ALLOWED_HOST_SUFFIXES = "${isProdLike ? '.pages.dev' : ''}"
+${dailyLimit ? `DAILY_AI_REQUEST_LIMIT = "${dailyLimit}"\n` : ''}`;
+
+const chatDevVars = `# Generated by npm run initialize
+# Local-only secrets for chat wrangler dev.
+OPENAI_API_KEY=${openAiKey}
+ANTHROPIC_API_KEY=${anthropicKey}
+CHAT_SESSION_SECRET=${chatSessionSecret}
+REFRESH_SECRET=${refreshSecret}
+`;
+
+const webEnv = `# Generated by npm run initialize
+NEXT_PUBLIC_API_URL=${apiUrl}
+NEXT_PUBLIC_CHAT_WORKER_URL=${chatUrl}
+NEXT_PUBLIC_DEFAULT_LOCALE=${defaultLocale}
+`;
+
+write('backend/wrangler.toml', backendToml, force);
+write('backend/.dev.vars', backendDevVars, force);
+write('web/workers/chat/wrangler.toml', chatToml, force);
+write('web/workers/chat/.dev.vars', chatDevVars, force);
+write('web/.env.local', webEnv, force);
+
+console.log('\nNext steps\n');
+if (d1Id.startsWith('00000000')) {
+  console.log(`1. Create D1 and paste the database_id into backend/wrangler.toml and web/workers/chat/wrangler.toml:`);
+  console.log(`   cd backend && npx wrangler d1 create ${d1Name}`);
+} else {
+  console.log('1. D1 database id is set.');
+}
+if (/^0{32}$/.test(kvId)) {
+  console.log('2. Create chat KV and paste the id into web/workers/chat/wrangler.toml:');
+  console.log('   cd web/workers/chat && npx wrangler kv namespace create MENU_CACHE');
+} else {
+  console.log('2. Chat KV namespace id is set.');
+}
+console.log('3. Apply D1 migrations:');
+console.log(`   cd backend && npx wrangler d1 migrations apply ${d1Name} --local`);
+console.log('4. Start dev servers in separate terminals:');
+console.log('   cd backend && npm run dev');
+console.log('   cd web/workers/chat && npm run dev');
+console.log('   cd web && npm run dev');
+
+if (isProdLike) {
+  console.log('\nProduction secrets to set with wrangler before deploy:');
+  if (llmProvider === 'openai') console.log('   cd web/workers/chat && npx wrangler secret put OPENAI_API_KEY');
+  if (llmProvider === 'anthropic') console.log('   cd web/workers/chat && npx wrangler secret put ANTHROPIC_API_KEY');
+  console.log('   cd web/workers/chat && npx wrangler secret put CHAT_SESSION_SECRET');
+  console.log('   cd web/workers/chat && npx wrangler secret put REFRESH_SECRET');
+  console.log('   cd backend && npx wrangler secret put OPENAI_API_KEY   # only if you use admin AI translations');
+}
+
+console.log('\nDone. Generated files are gitignored; do not commit real secrets.\n');
+rl.close();

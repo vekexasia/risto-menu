@@ -91,22 +91,24 @@ npx wrangler r2 bucket create menu-public
 Enable public access on the bucket in the Cloudflare dashboard and copy the
 `pub-XXXX.r2.dev` URL (or attach a custom domain).
 
-### 3.4 Wire IDs into wrangler.toml
+### 3.4 Generate config files
+
+Run the initializer from the repo root:
 
 ```bash
-cp backend/wrangler.toml.example      backend/wrangler.toml
-cp web/workers/chat/wrangler.toml.example  web/workers/chat/wrangler.toml
+cd ..
+npm run initialize
 ```
 
-Edit each `wrangler.toml` and fill in:
+It writes the gitignored files for you:
 
-- `database_id` (D1)
-- `id` under `[[kv_namespaces]]` (KV, chat worker only)
-- `R2_PUBLIC_URL` if using R2 (backend only)
-- `ALLOWED_ORIGINS` (the URLs your frontend will run on; both backend and chat worker)
-- `ALLOWED_HOST_SUFFIXES` (Pages preview deploys, e.g. `.menu.pages.dev`)
-- `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` (Cloudflare Access — see step 4; backend only)
-- `ADMIN_EMAILS` — comma-separated list of admin emails allowed to access `/admin/*` (backend only)
+- `backend/wrangler.toml`
+- `backend/.dev.vars`
+- `web/.env.local`
+- `web/workers/chat/wrangler.toml`
+- `web/workers/chat/.dev.vars`
+
+The script asks for your D1/KV IDs, URLs, Cloudflare Access values, admin emails, and chat provider. If you do not have the IDs yet, accept the placeholders, create the resources above, then paste the returned IDs into the generated TOML files.
 
 ---
 
@@ -145,39 +147,31 @@ fully self-contained, no service accounts.
 
 ## 5. Frontend env
 
-```bash
-cp web/.env.local.example web/.env.local
-```
+`npm run initialize` creates `web/.env.local` with:
 
-Fill in:
-
-- `NEXT_PUBLIC_API_URL` — your backend Worker URL (or `http://localhost:8787` for dev)
-- `NEXT_PUBLIC_CHAT_WORKER_URL` — your chat Worker URL (or `http://localhost:8788`)
+- `NEXT_PUBLIC_API_URL` — your backend Worker URL, or `http://localhost:8787` for dev
+- `NEXT_PUBLIC_CHAT_WORKER_URL` — your chat Worker URL, or `http://localhost:8788`
 - `NEXT_PUBLIC_DEFAULT_LOCALE` — default UI language (`en`, `it`, `de`, …)
 
-The frontend has no auth env vars — Cloudflare Access manages the login flow
-entirely.
+The frontend has no auth env vars — Cloudflare Access manages the login flow entirely.
 
 ---
 
 ## 6. Secrets
 
+`npm run initialize` generates local secrets in `.dev.vars` for development.
+
+For production, set secrets in Cloudflare before deploy:
+
 ```bash
 # Backend (only needed if you use the admin translation helper)
 cd backend
-echo "OPENAI_API_KEY=sk-..." >> .dev.vars        # local dev
-npx wrangler secret put OPENAI_API_KEY            # production
+npx wrangler secret put OPENAI_API_KEY
 
 # Chat worker
 cd ../web/workers/chat
-cp .dev.vars.example .dev.vars
-
-# Generate two random secrets:
-openssl rand -hex 32   # → CHAT_SESSION_SECRET
-openssl rand -hex 32   # → REFRESH_SECRET
-
-# Edit .dev.vars and paste them in. For production:
-npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put OPENAI_API_KEY        # if LLM_PROVIDER=openai
+npx wrangler secret put ANTHROPIC_API_KEY     # if LLM_PROVIDER=anthropic
 npx wrangler secret put CHAT_SESSION_SECRET
 npx wrangler secret put REFRESH_SECRET
 ```
