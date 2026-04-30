@@ -1,0 +1,8 @@
+backend/backups/
+backend/exports/
+backend/tmp-import.sql
+backend/*.sql
+web/.next/
+coverage/
+playwright-report/
+test-results/

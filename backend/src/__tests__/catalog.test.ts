@@ -2,6 +2,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { testRequest } from './helpers';
 import { createTestDb, makeDbEnv, seedSettings, seedMenu, seedCategory, seedEntry, signTestJwt, installJwksMock } from './helpers/db';
 
+type CatalogBody = {
+  restaurant: { name: string };
+  menus: Array<{ categories: Array<{ entries: Array<{ name: string; price: number }> }> }>;
+};
+
 beforeAll(() => installJwksMock());
 
 describe('GET /catalog', () => {
@@ -25,7 +30,7 @@ describe('GET /catalog', () => {
     seedEntry(db, 'entry-1', 'cat-1', { name: 'Bruschetta', price: 850 });
     const res = await testRequest('/catalog', { env: makeDbEnv(db) });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as CatalogBody;
     expect(body.restaurant.name).toBe('Trattoria Test');
     expect(body.menus).toHaveLength(1);
     expect(body.menus[0].categories).toHaveLength(1);
@@ -41,8 +46,8 @@ describe('GET /catalog', () => {
     seedEntry(db, 'visible', 'cat-1', { name: 'Visible' });
     seedEntry(db, 'hidden', 'cat-1', { name: 'Hidden', visibility: 'hidden' });
     const res = await testRequest('/catalog', { env: makeDbEnv(db) });
-    const body = await res.json() as Record<string, any>;
-    const names = body.menus[0].categories[0].entries.map((e: any) => e.name);
+    const body = await res.json() as CatalogBody;
+    const names = body.menus[0].categories[0].entries.map(e => e.name);
     expect(names).toEqual(['Visible']);
   });
 });
@@ -153,7 +158,7 @@ describe('POST /catalog/publish', () => {
       env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-1' }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as { ok: boolean };
     expect(body.ok).toBe(true);
   });
 });

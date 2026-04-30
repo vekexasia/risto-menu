@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import type { AppBindings } from '../types';
+import { isDemoMode } from '../lib/demo';
 
 export const meRoutes = new Hono<AppBindings>()
   /**
@@ -12,6 +13,7 @@ export const meRoutes = new Hono<AppBindings>()
    */
   .get('/', requireAuth, (c) => {
     const user = c.get('user');
+    const demoMode = isDemoMode(c.env);
     const adminUids = c.env.ADMIN_EMAILS
       ? new Set(c.env.ADMIN_EMAILS.split(',').map((s) => s.trim()).filter(Boolean))
       : new Set<string>();
@@ -20,6 +22,7 @@ export const meRoutes = new Hono<AppBindings>()
       uid: user.uid,
       email: user.email,
       name: user.name,
-      isAdmin: adminUids.has(user.uid),
+      isAdmin: demoMode || adminUids.has(user.uid),
+      demoMode,
     });
   });

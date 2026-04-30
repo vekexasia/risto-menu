@@ -5,6 +5,11 @@ import { createTestDb, makeDbEnv, seedSettings, seedMenu, seedCategory, seedEntr
 beforeAll(() => installJwksMock());
 
 const ADMIN_UID = 'admin-1';
+type SettingsRow = { name: string; payoff: string; ai_chat_enabled: number };
+type PublicationRow = { publication_state: string };
+type CategoryRow = { name: string };
+type EntryRow = { name: string; price: number; visibility: string; out_of_stock: number; category_id: string };
+
 
 async function adminEnv(db = createTestDb()) {
   seedSettings(db);
@@ -22,7 +27,7 @@ describe('GET /admin/settings', () => {
     const { env, headers } = await adminEnv();
     const res = await testRequest('/admin/settings', { headers, env });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as { publicationState: string; aiChatEnabled: boolean };
     expect(body).toHaveProperty('publicationState');
     expect(body).toHaveProperty('aiChatEnabled');
   });
@@ -38,7 +43,7 @@ describe('PUT /admin/settings', () => {
       body: { name: 'Trattoria Nuova', payoff: 'Il sapore di casa', aiChatEnabled: true },
     });
     expect(res.status).toBe(200);
-    const row = db.raw.prepare('SELECT name, payoff, ai_chat_enabled FROM settings WHERE id = 1').get() as Record<string, any>;
+    const row = db.raw.prepare('SELECT name, payoff, ai_chat_enabled FROM settings WHERE id = 1').get() as SettingsRow;
     expect(row.name).toBe('Trattoria Nuova');
     expect(row.payoff).toBe('Il sapore di casa');
     expect(row.ai_chat_enabled).toBe(1);
@@ -52,14 +57,14 @@ describe('PUT /admin/publication', () => {
       method: 'PUT', headers, env, body: { published: true },
     });
     expect(res.status).toBe(200);
-    let row = db.raw.prepare('SELECT publication_state FROM settings WHERE id = 1').get() as Record<string, any>;
+    let row = db.raw.prepare('SELECT publication_state FROM settings WHERE id = 1').get() as PublicationRow;
     expect(row.publication_state).toBe('published');
 
     res = await testRequest('/admin/publication', {
       method: 'PUT', headers, env, body: { published: false },
     });
     expect(res.status).toBe(200);
-    row = db.raw.prepare('SELECT publication_state FROM settings WHERE id = 1').get() as Record<string, any>;
+    row = db.raw.prepare('SELECT publication_state FROM settings WHERE id = 1').get() as PublicationRow;
     expect(row.publication_state).toBe('draft');
   });
 });
@@ -73,7 +78,7 @@ describe('PUT /admin/categories/:id', () => {
       method: 'PUT', headers, env, body: { name: 'New Name' },
     });
     expect(res.status).toBe(200);
-    const row = db.raw.prepare('SELECT name FROM menu_categories WHERE id = ?').get('cat-1') as Record<string, any>;
+    const row = db.raw.prepare('SELECT name FROM menu_categories WHERE id = ?').get('cat-1') as CategoryRow;
     expect(row.name).toBe('New Name');
   });
 });
@@ -132,10 +137,10 @@ describe('POST /admin/categories/:id/entries', () => {
       body: { name: 'Pizza Margherita', price: 9.5, menuVisibility: ['all'] },
     });
     expect(res.status).toBe(201);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as { id: string };
     expect(body.id).toBeDefined();
 
-    const row = db.raw.prepare('SELECT name, price, visibility FROM menu_entries WHERE id = ?').get(body.id) as Record<string, any>;
+    const row = db.raw.prepare('SELECT name, price, visibility FROM menu_entries WHERE id = ?').get(body.id) as Pick<EntryRow, 'name' | 'price' | 'visibility'>;
     expect(row.name).toBe('Pizza Margherita');
     expect(row.price).toBe(950);
     expect(row.visibility).toBe('all');
@@ -164,7 +169,7 @@ describe('PUT /admin/entries/:id', () => {
     });
     expect(res.status).toBe(200);
 
-    const row = db.raw.prepare('SELECT name, price, out_of_stock FROM menu_entries WHERE id = ?').get('entry-1') as Record<string, any>;
+    const row = db.raw.prepare('SELECT name, price, out_of_stock FROM menu_entries WHERE id = ?').get('entry-1') as Pick<EntryRow, 'name' | 'price' | 'out_of_stock'>;
     expect(row.name).toBe('New');
     expect(row.price).toBe(1234);
     expect(row.out_of_stock).toBe(1);
@@ -197,7 +202,7 @@ describe('POST /admin/entries/:id/move', () => {
     });
     expect(res.status).toBe(200);
 
-    const row = db.raw.prepare('SELECT category_id FROM menu_entries WHERE id = ?').get('entry-1') as Record<string, any>;
+    const row = db.raw.prepare('SELECT category_id FROM menu_entries WHERE id = ?').get('entry-1') as Pick<EntryRow, 'category_id'>;
     expect(row.category_id).toBe('cat-2');
   });
 

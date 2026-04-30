@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getMe, type MeResponse } from "@/lib/api";
+import { getMe, resetDemoData, type MeResponse } from "@/lib/api";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 
 interface AuthState {
@@ -32,6 +32,7 @@ export default function AdminContent({
     user: null,
     isAdmin: false,
   });
+  const [resettingDemo, setResettingDemo] = useState(false);
 
   const { data, loadRestaurant } = useRestaurantStore();
   const categories = useCategories();
@@ -72,6 +73,16 @@ export default function AdminContent({
   const handleSignOut = () => {
     // Cloudflare Access logout — clears the session cookie and redirects.
     window.location.href = "/cdn-cgi/access/logout";
+  };
+
+  const handleDemoReset = async () => {
+    setResettingDemo(true);
+    try {
+      await resetDemoData();
+      await loadRestaurant();
+    } finally {
+      setResettingDemo(false);
+    }
   };
 
   if (authState.loading) {
@@ -195,6 +206,15 @@ export default function AdminContent({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 13, color: "#424242", background: "#FBFAF9" }}>
+      {authState.user.demoMode && (
+        <div style={{ background: "#FFF7ED", color: "#9A3412", borderBottom: "1px solid #FED7AA", padding: "8px 18px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <strong style={{ fontSize: 12 }}>Demo mode</strong>
+          <span style={{ fontSize: 12, flex: 1 }}>This admin is public. Data resets automatically, so do not enter real customer data.</span>
+          <button onClick={handleDemoReset} disabled={resettingDemo} style={{ border: "1px solid #FDBA74", background: "#fff", color: "#9A3412", borderRadius: 5, padding: "4px 9px", fontSize: 12, fontWeight: 600, cursor: resettingDemo ? "default" : "pointer", opacity: resettingDemo ? 0.6 : 1 }}>
+            {resettingDemo ? "Resetting..." : "Reset now"}
+          </button>
+        </div>
+      )}
       <header style={{ height: 52, background: "#1F1A14", display: "flex", alignItems: "center", padding: "0 18px", gap: 20, flexShrink: 0 }}>
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 30, height: 30, borderRadius: 6, background: "#C47A4F", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, flexShrink: 0 }}>

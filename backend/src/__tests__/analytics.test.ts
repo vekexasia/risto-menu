@@ -6,6 +6,12 @@ beforeAll(() => installJwksMock());
 
 const ADMIN_UID = 'admin-1';
 
+type AnalyticsBody = {
+  period: string;
+  viewedItems: Array<{ entryId: string; viewCount: number }>;
+  dailyTotals: unknown[];
+};
+
 async function adminEnv() {
   const db = createTestDb();
   seedSettings(db);
@@ -58,7 +64,7 @@ describe('GET /admin/analytics', () => {
 
     const res = await testRequest('/admin/analytics?period=24h', { headers, env });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as AnalyticsBody;
     expect(body.period).toBe('24h');
     expect(body.viewedItems).toHaveLength(2);
     expect(body.viewedItems[0].entryId).toBe('entry-1');
@@ -75,7 +81,7 @@ describe('GET /admin/analytics', () => {
     const { env, headers } = await adminEnv();
     const res = await testRequest('/admin/analytics?period=7d', { headers, env });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as AnalyticsBody;
     expect(body.dailyTotals).toBeDefined();
     expect(body.dailyTotals).toHaveLength(7);
   });

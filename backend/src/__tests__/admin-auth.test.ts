@@ -17,6 +17,15 @@ describe('requireAdmin middleware', () => {
     expect(res.status).toBe(401);
   });
 
+  it('allows admin routes without Access in demo mode', async () => {
+    const db = createTestDb();
+    seedSettings(db);
+    const res = await testRequest('/admin/settings', {
+      env: makeDbEnv(db, { DEMO_MODE: 'true' }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   it('returns 403 when ADMIN_EMAILS is unset', async () => {
     const db = createTestDb();
     seedSettings(db);

@@ -32,6 +32,7 @@ export const MeResponseSchema = z.object({
   email: z.string().nullable().optional(),
   name: z.string().nullable().optional(),
   isAdmin: z.boolean(),
+  demoMode: z.boolean().optional(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
 

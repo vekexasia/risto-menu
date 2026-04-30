@@ -256,6 +256,13 @@ export function publishCatalog() {
   });
 }
 
+export function resetDemoData() {
+  return apiFetch(`/admin/demo/reset`, {
+    method: 'POST',
+    auth: true,
+  });
+}
+
 // ── Analytics ────────────────────────────────────────────────────────
 
 export function getAnalytics(

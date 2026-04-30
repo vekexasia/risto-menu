@@ -20,39 +20,57 @@ jobs:
   backend-test:
     name: Backend tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run check
-      - run: npm run test:run
+      - run: npm --workspace backend run check
+      - run: npm --workspace backend run test:run
+      - run: npm --workspace backend run test:migration-sql
 
   frontend-test:
     name: Frontend tests + build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run test:run
-      - run: npm run build
+      - run: npm --workspace web run lint
+      - run: npm --workspace web run test:run
+      - run: npm --workspace web run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8787
           NEXT_PUBLIC_CHAT_WORKER_URL: http://localhost:8788
+          NEXT_PUBLIC_DEFAULT_LOCALE: it
+
+  demo-frontend-build:
+    name: Demo frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm --workspace web run build:cf
+        env:
+          NEXT_PUBLIC_API_URL: https://risto-menu-api.andreabaccega.com
+          NEXT_PUBLIC_CHAT_WORKER_URL: ""
+          NEXT_PUBLIC_DEFAULT_LOCALE: it
+      - name: Assert demo build has no chat bundle
+        run: |
+          ! grep -R "https://menu-chat\|http://localhost\|http://127\.0\.0\.1\|:8787\|:8788" web/out/_next/static
+          ! grep -R "Tony" web/out/_next/static
 
   chat-test:
     name: Chat worker tests

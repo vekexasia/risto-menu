@@ -2,6 +2,7 @@ import { createMiddleware } from 'hono/factory';
 import type { Env, RuntimeConfig } from '../types';
 import type { AuthUser } from './auth';
 import { createDb } from '../db/index';
+import { isDemoMode } from '../lib/demo';
 
 type AdminBindings = {
   Bindings: Env;
@@ -43,6 +44,11 @@ export const attachDb = createMiddleware<AdminBindings>(async (c, next) => {
  */
 export const requireAdmin = createMiddleware<AdminBindings>(async (c, next) => {
   const user = c.get('user');
+
+  if (isDemoMode(c.env)) {
+    await next();
+    return;
+  }
   const admins = parseAdminEmails(c.env);
 
   if (admins.size === 0) {

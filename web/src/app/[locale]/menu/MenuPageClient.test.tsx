@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 // ── Mocks must come before the component import ─────────────────────
 
 const loadRestaurantMock = vi.fn();
+const chatPanelMock = vi.fn(() => <div data-testid="chat-panel" />);
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ locale: 'it', restaurantSlug: 'test-resto' }),
@@ -30,7 +31,7 @@ vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
-vi.mock('@/components/chat/ChatPanel', () => ({ ChatPanel: () => null }));
+vi.mock('@/components/chat/ChatPanel', () => ({ ChatPanel: () => chatPanelMock() }));
 vi.mock('@/components/menu/MenuItemDetail', () => ({ MenuItemDetail: () => null }));
 vi.mock('@/components/menu/RestaurantInfoModal', () => ({ RestaurantInfoModal: () => null }));
 vi.mock('@/components/menu/PromotionPopup', () => ({ PromotionPopup: () => null }));
@@ -54,8 +55,33 @@ function resetStores() {
 
 beforeEach(() => {
   loadRestaurantMock.mockReset();
+  chatPanelMock.mockClear();
   resetStores();
 });
+
+const menuData = {
+  id: 'demo-restaurant',
+  name: 'Trattoria Demo',
+  features: { aiChat: true, demoMode: true },
+  categories: [
+    {
+      id: 'cat-antipasti',
+      name: 'Antipasti',
+      order: 0,
+      entries: [
+        {
+          id: 'entry-bruschetta',
+          name: 'Bruschetta',
+          description: 'Pane tostato',
+          price: 7.5,
+          order: 0,
+          allergens: [],
+          menuVisibility: ['all'],
+        },
+      ],
+    },
+  ],
+} as never;
 
 describe('MenuPageClient', () => {
   it('renders the loading spinner when isLoading is true', () => {
@@ -91,5 +117,30 @@ describe('MenuPageClient', () => {
   it('calls loadRestaurant on mount with the slug from useParams', () => {
     render(<MenuPageClient />);
     expect(loadRestaurantMock).toHaveBeenCalled();
+  });
+
+  it('does not render Tony when ai chat is enabled but no chat worker URL is configured', () => {
+    const previous = process.env.NEXT_PUBLIC_CHAT_WORKER_URL;
+    delete process.env.NEXT_PUBLIC_CHAT_WORKER_URL;
+    useRestaurantStore.setState({ data: menuData, isLoading: false } as never);
+
+    render(<MenuPageClient />);
+
+    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
+    expect(chatPanelMock).not.toHaveBeenCalled();
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_CHAT_WORKER_URL;
+    else process.env.NEXT_PUBLIC_CHAT_WORKER_URL = previous;
+  });
+
+  it('renders Tony only when a chat worker URL is configured', () => {
+    const previous = process.env.NEXT_PUBLIC_CHAT_WORKER_URL;
+    process.env.NEXT_PUBLIC_CHAT_WORKER_URL = 'https://chat.example.com';
+    useRestaurantStore.setState({ data: menuData, isLoading: false } as never);
+
+    render(<MenuPageClient />);
+
+    expect(screen.getAllByTestId('chat-panel')).toHaveLength(1);
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_CHAT_WORKER_URL;
+    else process.env.NEXT_PUBLIC_CHAT_WORKER_URL = previous;
   });
 });

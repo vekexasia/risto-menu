@@ -31,6 +31,7 @@ export default function MenuPageClient() {
   const locale = params.locale as string;
   const menuType = searchParams.get("type");
   const aiChatDevOverride = process.env.NODE_ENV !== 'production' && searchParams.get('aiChat') === '1';
+  const hasChatWorker = Boolean(process.env.NEXT_PUBLIC_CHAT_WORKER_URL);
   const { data, isLoading, error, loadRestaurant } = useRestaurantStore();
   const categories = useCategories();
   const [showNotice, setShowNotice] = useState(true);
@@ -229,6 +230,11 @@ export default function MenuPageClient() {
 
   return (
     <main className="min-h-screen bg-gray-100 pb-20">
+      {data.features?.demoMode && (
+        <div className="bg-orange-50 border-b border-orange-200 px-4 py-2 text-center text-xs font-medium text-orange-800">
+          Demo menu. Changes made in admin reset automatically.
+        </div>
+      )}
       <div className="relative">
         {data.headerImage && (
           <div className="relative h-56 overflow-hidden">
@@ -382,13 +388,10 @@ export default function MenuPageClient() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
         </svg>
       </Link>
-
+      {hasChatWorker && (data?.features?.aiChat === true || aiChatDevOverride) && <ChatPanel locale={locale} />}
       <MenuItemDetail item={selectedItem} onClose={() => setSelectedItem(null)} locale={locale} />
 
       {data && <RestaurantInfoModal restaurant={data} isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />}
-
-      {(data?.features?.aiChat === true || aiChatDevOverride) && <ChatPanel locale={locale} />}
-
       {data.promotion && <PromotionPopup promotion={data.promotion} open={showPromo} onClose={handlePromoClose} />}
 
       <style>{`

@@ -12,6 +12,9 @@ APP_ENV = "development"
 API_VERSION = "v1"
 SERVICE_NAME = "menu-backend"
 
+# Demo deployments only: bypasses Cloudflare Access admin auth and resets data on cron.
+# Never enable this on production.
+DEMO_MODE = "false"
 # Public URL of your R2 bucket (or a custom domain pointing at it).
 R2_PUBLIC_URL = "https://pub-XXXXXXXX.r2.dev"
 
@@ -46,6 +49,10 @@ migrations_dir = "drizzle"
 # bucket_name = "risto-public-menu"
 # preview_bucket_name = "risto-public-menu"
 
+
+# Optional for demo deployments: reset demo data every hour.
+# [triggers]
+# crons = ["0 * * * *"]
 # Optional: if you wire up a queue for analytics/audit events.
 # [[queues.producers]]
 # binding = "EVENTS_QUEUE"

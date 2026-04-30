@@ -592,6 +592,8 @@ export interface RestaurantData {
     disabledLocales?: string[] | null;
     /** Admin-defined custom locales (non-ISO, e.g. Veneto). */
     customLocales?: { code: string; name: string }[] | null;
+    /** Public demo deployment marker. Data may reset automatically. */
+    demoMode?: boolean;
   };
 }
 

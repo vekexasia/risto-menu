@@ -11,6 +11,14 @@ import type { ChatSession } from '../middleware/session';
 
 const MAX_MESSAGES = 20;
 
+function summarizeTextForLog(text: string): string {
+  return `${text.length} chars`;
+}
+
+function summarizeToolsForLog(toolCalls: string[]): string {
+  return toolCalls.map(tc => tc.split('(')[0]).join(', ');
+}
+
 export async function handleChat(request: Request, env: Env, corsHeaders: Record<string, string>, session: ChatSession, ctx: ExecutionContext): Promise<Response> {
   const startTime = Date.now();
   const sessionId = crypto.randomUUID();
@@ -70,7 +78,7 @@ export async function handleChat(request: Request, env: Env, corsHeaders: Record
     });
   }
 
-  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '(empty)';
+  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
 
   // Limit message history
   const trimmedMessages = messages.slice(-MAX_MESSAGES);
@@ -79,7 +87,7 @@ export async function handleChat(request: Request, env: Env, corsHeaders: Record
   // Short messages (e.g. clicked choices like "Main courses") aren't enough
   // for the model to detect language — we analyze the full conversation.
   const userLang = detectUserLanguage(trimmedMessages);
-  console.log(`[CHAT] ${ip} | sid=${session.sid.slice(0, 8)}… | locale=${locale} | lang=${userLang} | msgs=${messages.length} | user: "${lastUserMsg}"`);
+  console.log(`[CHAT] ${ip} | sid=${session.sid.slice(0, 8)}… | locale=${locale} | lang=${userLang} | msgs=${messages.length} | user=${summarizeTextForLog(lastUserMsg)}`);
 
   // Load menu data (from in-memory cache, KV, or D1)
   let menuData;
@@ -138,7 +146,7 @@ export async function handleChat(request: Request, env: Env, corsHeaders: Record
       const totalMs = Date.now() - startTime;
       const llmMs = Date.now() - llmStart;
       const responseText = logParts.join('');
-      console.log(`[CHAT] ${ip} | DONE in ${totalMs}ms (llm=${llmMs}ms) | tools=[${toolCalls.join(', ')}] | response: "${responseText}"`);
+      console.log(`[CHAT] ${ip} | DONE in ${totalMs}ms (llm=${llmMs}ms) | tools=[${summarizeToolsForLog(toolCalls)}] | response=${summarizeTextForLog(responseText)}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'LLM error';
       console.error(`[CHAT] ${ip} | LLM ERROR: ${msg}`);

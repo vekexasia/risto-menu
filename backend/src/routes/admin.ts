@@ -8,6 +8,8 @@ import { buildCatalogFromDb, warmCatalogAfterMutation } from './catalog';
 import { parseBody } from '../lib/validate';
 import { validateImage } from '../lib/image';
 import { checkRateLimit } from '../lib/rate-limit';
+import { isDemoMode } from '../lib/demo';
+import { resetDemoData } from '../lib/demo-reset';
 import {
   UpdateSettingsBodySchema,
   UpdateHoursBodySchema,
@@ -25,12 +27,21 @@ const admin = new Hono<AppBindings>();
 
 const base = [requireAuth, attachDb, requireAdmin] as const;
 
+
+admin.post('/demo/reset', ...base, async (c) => {
+  if (!isDemoMode(c.env)) return c.json({ error: 'Not Found' }, 404);
+
+  await resetDemoData(c.env);
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
 // ── Catalog Preview (admin) ──────────────────────────────────────────
 
 admin.get('/catalog', ...base, async (c) => {
   const catalog = await buildCatalogFromDb(c.get('db'), {
     publicOnly: false,
     includeHidden: true,
+    demoMode: isDemoMode(c.env),
   });
   if (!catalog) return c.json({ error: 'Not found' }, 404);
   return c.json(catalog);

@@ -2,6 +2,13 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { testRequest } from './helpers';
 import { createTestDb, makeDbEnv, signTestJwt, installJwksMock } from './helpers/db';
 
+type MeBody = {
+  uid: string;
+  email: string;
+  name?: string;
+  isAdmin: boolean;
+};
+
 beforeAll(() => installJwksMock());
 
 describe('GET /admin/me', () => {
@@ -28,7 +35,7 @@ describe('GET /admin/me', () => {
       env: makeDbEnv(db),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as MeBody;
     // With Cloudflare Access, uid and email are the same (email is the stable identifier).
     expect(body.uid).toBe('user1@test.com');
     expect(body.email).toBe('user1@test.com');
@@ -44,7 +51,7 @@ describe('GET /admin/me', () => {
       env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-uid,other-admin' }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as MeBody;
     expect(body.isAdmin).toBe(true);
   });
 
@@ -55,7 +62,7 @@ describe('GET /admin/me', () => {
       headers: { 'Cf-Access-Jwt-Assertion': token },
       env: makeDbEnv(db, { ADMIN_EMAILS: 'admin-uid' }),
     });
-    const body = await res.json() as Record<string, any>;
+    const body = await res.json() as MeBody;
     expect(body.isAdmin).toBe(false);
   });
 });

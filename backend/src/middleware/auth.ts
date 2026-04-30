@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import type { Env, RuntimeConfig } from '../types';
+import { isDemoMode } from '../lib/demo';
 
 export interface AuthUser {
   /** Stable identifier for the authenticated user — for Cloudflare Access this is the email. */
@@ -165,6 +166,17 @@ async function verifyJwt(
  */
 export const requireAuth = createMiddleware<AuthBindings>(async (c, next) => {
   const config = c.get('config');
+
+  if (isDemoMode(c.env)) {
+    c.set('user', {
+      uid: 'demo-admin@risto.menu',
+      email: 'demo-admin@risto.menu',
+      name: 'Demo Admin',
+      claims: { demo: true },
+    });
+    await next();
+    return;
+  }
 
   if (!config.auth.configured) {
     return c.json({ error: 'Auth not configured on this backend instance' }, 503);

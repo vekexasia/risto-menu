@@ -5,7 +5,7 @@ import { useChatStore } from '@/stores/chatStore';
 import { useChatActionsStore } from '@/stores/chatActionsStore';
 import type { SSETextEvent, SSEToolCallEvent, SSEErrorEvent } from '@/lib/chat-types';
 
-const CHAT_WORKER_URL = process.env.NEXT_PUBLIC_CHAT_WORKER_URL || 'http://localhost:8787';
+const CHAT_WORKER_URL = process.env.NEXT_PUBLIC_CHAT_WORKER_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8787');
 const SESSION_RETRY_MS = 1_000;
 const SESSION_STORAGE_KEY = 'risto-chat-session';
 
@@ -52,6 +52,7 @@ function clearStoredSession() {
 }
 
 async function createChatSession(): Promise<string> {
+  if (!CHAT_WORKER_URL) throw new Error('Chat worker URL is not configured');
   while (true) {
     const response = await fetch(`${CHAT_WORKER_URL}/session`, {
       method: 'POST',
@@ -90,10 +91,15 @@ export function useStreamingChat(locale: string) {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    if (!CHAT_WORKER_URL) return;
     void ensureChatSession().catch(() => {});
   }, []);
 
   const sendMessage = useCallback(async (content: string) => {
+    if (!CHAT_WORKER_URL) {
+      useChatStore.getState().appendToStream('La chat non è disponibile in questa demo.');
+      return;
+    }
     const store = useChatStore.getState();
     if (store.isStreaming) return;
 

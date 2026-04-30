@@ -1,5 +1,12 @@
 import type { Page } from '@playwright/test';
 
+declare global {
+  interface Window {
+    __playwright_admin__?: { user: typeof MOCK_USER; restaurantId: string };
+    __playwright_restaurant__?: typeof MOCK_RESTAURANT;
+  }
+}
+
 // Plain mock data matching the RestaurantData interface shape
 export const MOCK_RESTAURANT_ID = 'demo-restaurant';
 export const MOCK_RESTAURANT_SLUG = 'demo-restaurant';
@@ -56,8 +63,8 @@ export const MOCK_USER = {
 export async function setupAdminTestEnv(page: Page, restaurantId = MOCK_RESTAURANT_ID) {
   await page.addInitScript(
     ({ restaurant, user, rid }) => {
-      (window as any).__playwright_admin__ = { user, restaurantId: rid };
-      (window as any).__playwright_restaurant__ = restaurant;
+      window.__playwright_admin__ = { user, restaurantId: rid };
+      window.__playwright_restaurant__ = restaurant;
     },
     { restaurant: MOCK_RESTAURANT, user: MOCK_USER, rid: restaurantId }
   );

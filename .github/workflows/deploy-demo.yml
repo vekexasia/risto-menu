@@ -1,0 +1,140 @@
+name: Deploy demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  DEMO_WEB_DOMAIN: https://risto-menu.andreabaccega.com
+  DEMO_PAGES_DOMAIN: https://risto-menu-demo.pages.dev
+  DEMO_API_DOMAIN: https://risto-menu-api.andreabaccega.com
+  DEMO_BACKEND_NAME: risto-menu-demo-api
+  DEMO_PAGES_PROJECT: risto-menu-demo
+  DEMO_D1_DATABASE_NAME: risto-menu-demo-db
+
+jobs:
+  deploy-demo:
+    name: Deploy demo stack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Backend checks
+        run: |
+          npm --workspace backend run check
+          npm --workspace backend run test:run
+          npm --workspace backend run test:migration-sql
+
+      - name: Web checks
+        run: |
+          npm --workspace web run lint
+          npm --workspace web run test:run
+
+      - name: Write demo backend config
+        working-directory: backend
+        run: |
+          cat > wrangler.demo.toml <<EOF
+          name = "${DEMO_BACKEND_NAME}"
+          main = "src/index.ts"
+          compatibility_date = "2025-04-11"
+
+          routes = [
+            { pattern = "risto-menu-api.andreabaccega.com", custom_domain = true }
+          ]
+
+          [vars]
+          APP_ENV = "staging"
+          API_VERSION = "v1"
+          SERVICE_NAME = "risto-menu-demo-api"
+          DEMO_MODE = "true"
+          ALLOWED_ORIGINS = "${DEMO_WEB_DOMAIN}"
+          ALLOWED_HOST_SUFFIXES = ".pages.dev"
+          R2_PUBLIC_URL = ""
+
+          [triggers]
+          crons = ["0 * * * *"]
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "${DEMO_D1_DATABASE_NAME}"
+          database_id = "${{ vars.DEMO_D1_DATABASE_ID }}"
+          migrations_dir = "drizzle"
+          EOF
+
+      - name: Apply demo D1 migrations
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply "${DEMO_D1_DATABASE_NAME}" --remote --config wrangler.demo.toml
+
+      - name: Deploy demo backend
+        working-directory: backend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.demo.toml
+
+      - name: Build demo frontend
+        working-directory: web
+        env:
+          NEXT_PUBLIC_API_URL: ${{ env.DEMO_API_DOMAIN }}
+          NEXT_PUBLIC_CHAT_WORKER_URL: ""
+          NEXT_PUBLIC_DEFAULT_LOCALE: it
+        run: npm run build:cf
+
+      - name: Deploy demo frontend
+        working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler pages deploy out --project-name="${DEMO_PAGES_PROJECT}" --branch=main
+
+      - name: Seed demo data
+        env:
+          DEMO_API_DOMAIN: ${{ env.DEMO_API_DOMAIN }}
+        run: |
+          curl --fail --retry 5 --retry-delay 5 -X POST "${DEMO_API_DOMAIN}/admin/demo/reset"
+
+      - name: Smoke test demo API
+        env:
+          DEMO_API_DOMAIN: ${{ env.DEMO_API_DOMAIN }}
+        run: |
+          curl --fail --retry 5 --retry-delay 5 "${DEMO_API_DOMAIN}/health"
+          curl --fail --retry 5 --retry-delay 5 "${DEMO_API_DOMAIN}/catalog" | tee /tmp/catalog.json
+          node -e "const c=require('/tmp/catalog.json'); const entries=(c.menus||[]).flatMap(m => m.categories || []).flatMap(cat => cat.entries || []); if (!c.restaurant?.features?.demoMode) throw new Error('demoMode missing'); if (entries.length < 10) throw new Error('demo catalog too small')"
+
+      - name: Smoke test demo frontend
+        env:
+          DEMO_PAGES_DOMAIN: ${{ env.DEMO_PAGES_DOMAIN }}
+          DEMO_API_DOMAIN: ${{ env.DEMO_API_DOMAIN }}
+        run: |
+          curl --fail --retry 10 --retry-delay 6 "${DEMO_PAGES_DOMAIN}/it/menu/" -o /tmp/menu.html
+          grep -q "_next/static" /tmp/menu.html
+          grep -R "${DEMO_API_DOMAIN}" web/out/_next/static
+          ! grep -R "https://menu-chat\|http://localhost\|http://127\.0\.0\.1\|:8787\|:8788" web/out/_next/static
+          ! grep -R "Tony" web/out/_next/static
+
+      - name: Demo URLs
+        run: |
+          echo "Public menu: ${DEMO_WEB_DOMAIN}/it/menu/"
+          echo "Pages fallback: ${DEMO_PAGES_DOMAIN}/it/menu/"
+          echo "Admin: ${DEMO_WEB_DOMAIN}/admin"
+          echo "API: ${DEMO_API_DOMAIN}"

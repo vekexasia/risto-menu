@@ -15,6 +15,7 @@ export interface Env {
   ADMIN_EMAILS?: string;
   OPENAI_API_KEY?: string;
   BASE_DOMAIN?: string;
+  DEMO_MODE?: string;
 }
 
 export type AppEnvironment = 'development' | 'staging' | 'production';

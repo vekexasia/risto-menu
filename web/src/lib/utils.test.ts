@@ -123,28 +123,33 @@ describe('getLocalizedField', () => {
   });
 
   describe('returning default value when field does not exist', () => {
+    type RuntimeEntity = {
+      i18n?: Record<string, Record<string, string>>;
+      name?: string;
+      price?: unknown;
+    };
+
     it('should return provided default value when field is not a string', () => {
-      const entity = {
+      const entity: RuntimeEntity = {
         name: 'Pizza',
         price: 10,
         i18n: {},
       };
-      // TypeScript would normally prevent this, but testing runtime behavior
-      expect(getLocalizedField(entity as any, 'price', 'en', 'N/A')).toBe('N/A');
+      expect(getLocalizedField(entity, 'price', 'en', 'N/A')).toBe('N/A');
     });
 
     it('should return empty string when no default value provided and field missing', () => {
-      const entity = {
+      const entity: RuntimeEntity = {
         i18n: {},
       };
-      expect(getLocalizedField(entity as any, 'name', 'en')).toBe('');
+      expect(getLocalizedField(entity, 'name', 'en')).toBe('');
     });
 
     it('should use provided default value', () => {
-      const entity = {
+      const entity: RuntimeEntity = {
         i18n: {},
       };
-      expect(getLocalizedField(entity as any, 'name', 'en', 'Unknown')).toBe('Unknown');
+      expect(getLocalizedField(entity, 'name', 'en', 'Unknown')).toBe('Unknown');
     });
   });
 });

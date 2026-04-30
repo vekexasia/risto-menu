@@ -6,6 +6,7 @@ import { attachDb, requireAdmin } from '../middleware/admin-guard';
 import { RecordViewBodySchema } from '@menu/schemas';
 import type { CatalogResponse } from '@menu/schemas';
 import * as schema from '../db/schema';
+import { isDemoMode } from '../lib/demo';
 import type { AppBindings, Env } from '../types';
 
 export const catalogRoutes = new Hono<AppBindings>()
@@ -142,6 +143,8 @@ type BuildCatalogOptions = {
   publicOnly?: boolean;
   /** Admin preview endpoints may include entries hidden from public customers. */
   includeHidden?: boolean;
+  /** Marks catalog as a public demo deployment. */
+  demoMode?: boolean;
 };
 
 function getCatalogSnapshotKey(): string {
@@ -248,7 +251,7 @@ export async function refreshCatalogArtifacts(
 ): Promise<{ response: Response; body: string; generatedAt: string; cacheWarmed: boolean; snapshotWritten: boolean } | null> {
   await invalidateCatalogCache(requestUrl);
 
-  const catalog = await buildCatalogFromDb(db, { publicOnly: true, includeHidden: false });
+  const catalog = await buildCatalogFromDb(db, { publicOnly: true, includeHidden: false, demoMode: isDemoMode(env) });
   if (!catalog) {
     await deleteCatalogSnapshot(env);
     return null;
@@ -292,7 +295,7 @@ export async function buildCatalogFromDb(
   db: DbInstance,
   options: BuildCatalogOptions = {},
 ): Promise<CatalogResponse | null> {
-  const { publicOnly = false, includeHidden = true } = options;
+  const { publicOnly = false, includeHidden = true, demoMode = false } = options;
 
   const [restaurant] = await db
     .select()
@@ -357,6 +360,7 @@ export async function buildCatalogFromDb(
         enabledLocales: restaurant.enabledLocales,
         disabledLocales: restaurant.disabledLocales,
         customLocales: restaurant.customLocales ?? [],
+        demoMode,
       },
     },
     menus: menus.map((m) => ({
