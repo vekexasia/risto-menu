@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { defaultLocale } from "@/lib/i18n-config";
 
 /**
- * Root path redirects to the menu in the deployment's default locale.
- * Single-tenant model: there is exactly one menu per deployment, served at /{locale}/menu.
+ * Root path redirects to the localized home page in the deployment's default
+ * locale. From there the diner picks a language and enters a menu.
  */
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(`/${defaultLocale}/menu`);
+    router.replace(`/${defaultLocale}`);
   }, [router]);
 
   return null;
