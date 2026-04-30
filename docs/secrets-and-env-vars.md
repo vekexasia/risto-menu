@@ -2,6 +2,8 @@
 
 Complete reference for all secrets and environment variables across the stack.
 
+For local setup, prefer `npm run initialize`. It creates `.risto-menu.local.json` as the single source of truth and generates the framework-specific files below. Edit `.risto-menu.local.json`, then run `npm run config:generate` instead of editing generated files directly.
+
 ## Backend — Cloudflare Worker (`menu-backend`)
 
 ### Secrets (via `wrangler secret put`)
@@ -95,6 +97,7 @@ sent via the `Cf-Access-Jwt-Assertion` header to the backend.
 
 These files may contain real secrets and must stay out of git history:
 
+- `.risto-menu.local.json`
 - `backend/.dev.vars`
 - `backend/wrangler.toml`
 - `web/.env.local`
@@ -113,12 +116,12 @@ These files may contain real secrets and must stay out of git history:
    ```
 
 2. Set up Cloudflare Access apps for the Pages project + the backend Worker
-   (Zero Trust → Access → Applications). Copy the AUD tag into both
-   `wrangler.toml` files.
+   (Zero Trust → Access → Applications). Copy the AUD tag into `.risto-menu.local.json`,
+   then run `npm run config:generate`.
 
 3. Set Worker secrets (see above).
 
-4. Set Pages environment variables (or `web/.env.production.local` for local builds).
+4. Set Pages environment variables from `web/.env.local` or configure them in the Pages dashboard.
 
 5. Build/deploy:
    ```bash

@@ -71,13 +71,13 @@ cd risto-menu
 npm ci
 cd web/workers/chat && npm ci && cd -
 
-# Generate local config files interactively
+# Create .risto-menu.local.json and generate local config files
 npm run initialize
 
-# If you accepted placeholder IDs, provision D1 + KV and paste the returned IDs
+# If you accepted placeholder IDs, provision D1 + KV, update .risto-menu.local.json, then regenerate
 cd backend && npx wrangler d1 create menu-db
 cd ../web/workers/chat && npx wrangler kv namespace create MENU_CACHE
-cd ../../..
+cd ../../.. && npm run config:generate
 
 # Apply migrations and run
 cd backend && npx wrangler d1 migrations apply menu-db --local && npm run dev

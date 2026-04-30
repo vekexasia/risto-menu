@@ -100,7 +100,7 @@ cd ..
 npm run initialize
 ```
 
-It writes the gitignored files for you:
+It creates `.risto-menu.local.json`, which is the source of truth for local setup and is gitignored because it may contain secrets. It then generates the runtime files required by Next.js and Wrangler:
 
 - `backend/wrangler.toml`
 - `backend/.dev.vars`
@@ -108,7 +108,13 @@ It writes the gitignored files for you:
 - `web/workers/chat/wrangler.toml`
 - `web/workers/chat/.dev.vars`
 
-The script asks for your D1/KV IDs, URLs, Cloudflare Access values, admin emails, and chat provider. If you do not have the IDs yet, accept the placeholders, create the resources above, then paste the returned IDs into the generated TOML files.
+Do not edit the generated files directly. Edit `.risto-menu.local.json`, then regenerate:
+
+```bash
+npm run config:generate
+```
+
+The script asks for your D1/KV IDs, URLs, Cloudflare Access values, admin emails, and chat provider. If you do not have the IDs yet, accept the placeholders, create the resources above, update `.risto-menu.local.json`, then run `npm run config:generate`.
 
 ---
 
