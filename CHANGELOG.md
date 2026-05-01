@@ -11,6 +11,66 @@ are written for LLM coding assistants picking up this codebase in a future
 session: they call out file moves, schema invariants, and gotchas that aren't
 obvious from the diff but matter when extending the feature.
 
+## 2026-05-01 — Language flags and custom flag uploads
+
+### Added
+
+- Real SVG flags for standard locales (it / en / de / fr / es / nl / ru / pt)
+  via the `country-flag-icons` package, replacing emoji that rendered as
+  letter pairs on Windows. The flags appear in the public LanguagePicker,
+  the admin translation tabs, and the Lingue settings page.
+- Custom locales (e.g. `vec`) gain an optional `flagUrl`. Admins can
+  upload a per-locale flag image from the Lingue settings page; the
+  upload reuses the existing R2 image pipeline (JPEG/PNG/WebP, 5 MB cap)
+  and stores objects under `images/settings/flag-<code>-*.{ext}`. Old
+  keys are deleted on re-upload and on remove.
+- New backend endpoints: `POST /admin/locale-flag/:code` and
+  `DELETE /admin/locale-flag/:code`.
+- New shared UI primitive `<Flag>` (in `web/src/components/ui/Flag.tsx`)
+  that renders, in order: a custom uploaded URL → bundled SVG for known
+  locales → uppercase code-chip fallback.
+
+### Changed
+
+- `customLocales[]` items gain an optional `flagUrl` field in both
+  `UpdateSettingsBodySchema` and the public catalog `features.customLocales`.
+  Optional and backwards-compatible — existing rows continue to work.
+
+### Breaking changes
+
+None. Existing catalog consumers ignore the new `flagUrl` field.
+
+### Upgrade actions
+
+```bash
+git pull
+(cd backend && npx wrangler d1 migrations apply menu-db --remote)
+(cd backend && npm run deploy)
+(cd web && npm run deploy:cf)
+```
+
+No DB migrations in this release. `customLocales[*].flagUrl` lives inside
+the existing `settings.custom_locales` JSON column.
+
+### Migrations
+
+- _none in this release_
+
+### Notes for AI agents
+
+- `country-flag-icons` SVG strings are imported per-file
+  (`country-flag-icons/string/3x2/<CC>`) and converted to data URLs in
+  `web/src/lib/locale-flags.ts`. The barrel `country-flag-icons/react/3x2`
+  pulls every flag — keep imports per-file.
+- `web/src/types/country-flag-icons.d.ts` declares the per-file subpath
+  modules; the package only ships types for the index.
+- Custom-flag uploads deliberately do not accept SVG (parser-level XSS).
+  If that ever changes, sanitize before storing.
+- `Flag` accepts a `decorative` prop. Use it whenever the locale label
+  text is rendered next to the flag (tabs, dropdown rows) — otherwise
+  the accessible name double-includes the language and breaks
+  testing-library `getByRole("button", { name: ... })` lookups.
+
 ## 2026-05-01 — Multi-menu and standard icons
 
 ### Added
