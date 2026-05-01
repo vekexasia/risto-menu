@@ -37,6 +37,9 @@ export type CatalogCategory = z.infer<typeof CatalogCategorySchema>;
  */
 export const MENU_ICONS = [
   'utensils',
+  'lunch',
+  'dinner',
+  'breakfast',
   'wine',
   'beer',
   'cocktail',
@@ -47,7 +50,6 @@ export const MENU_ICONS = [
   'salad',
   'fish',
   'bread',
-  'breakfast',
 ] as const;
 export const MenuIconSchema = z.enum(MENU_ICONS);
 export type MenuIcon = z.infer<typeof MenuIconSchema>;

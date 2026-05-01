@@ -4,6 +4,9 @@
 // breaks Turbopack's barrel resolution at the moment.
 export const MENU_ICON_KINDS = [
   "utensils",
+  "lunch",
+  "dinner",
+  "breakfast",
   "wine",
   "beer",
   "cocktail",
@@ -14,7 +17,6 @@ export const MENU_ICON_KINDS = [
   "salad",
   "fish",
   "bread",
-  "breakfast",
 ] as const;
 export type MenuIconKind = (typeof MENU_ICON_KINDS)[number];
 
@@ -23,6 +25,9 @@ export type MenuIconKind = (typeof MENU_ICON_KINDS)[number];
  */
 export const MENU_ICON_LABELS: Record<MenuIconKind, string> = {
   utensils: "Cibo",
+  lunch: "Pranzo",
+  dinner: "Cena",
+  breakfast: "Colazione",
   wine: "Vini",
   beer: "Birre",
   cocktail: "Cocktail",
@@ -33,7 +38,6 @@ export const MENU_ICON_LABELS: Record<MenuIconKind, string> = {
   salad: "Insalate",
   fish: "Pesce",
   bread: "Pane",
-  breakfast: "Colazione",
 };
 
 const FALLBACK_KIND: MenuIconKind = "utensils";
@@ -63,6 +67,23 @@ export function MenuIcon({ kind, className }: MenuIconProps) {
           <path d="M7 3v8a2 2 0 0 0 4 0V3" />
           <path d="M9 11v10" />
           <path d="M17 3c-1.5 0-3 1.5-3 4s1.5 4 3 4v10" />
+        </svg>
+      );
+    case "lunch":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="7" r="2.5" />
+          <path d="M12 2v1.5M12 10.5v1M5.5 7H7M17 7h1.5M7.5 2.5l1 1M16.5 2.5l-1 1M7.5 11.5l1-1M16.5 11.5l-1-1" />
+          <ellipse cx="12" cy="18" rx="8" ry="1.8" />
+          <path d="M4 18c0 1.5 3.5 3 8 3s8-1.5 8-3" />
+        </svg>
+      );
+    case "dinner":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M14 3a5 5 0 1 0 4 8 5.5 5.5 0 0 1-4-8z" />
+          <ellipse cx="12" cy="18" rx="8" ry="1.8" />
+          <path d="M4 18c0 1.5 3.5 3 8 3s8-1.5 8-3" />
         </svg>
       );
     case "wine":
