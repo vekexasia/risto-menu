@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { testRequest } from './helpers';
-import { createTestDb, makeDbEnv, seedSettings, seedMenu, seedCategory, seedEntry, signTestJwt, installJwksMock } from './helpers/db';
+import { createTestDb, makeDbEnv, seedSettings, seedMenu, seedCategory, seedEntry, seedMembership, signTestJwt, installJwksMock } from './helpers/db';
 
 type CatalogBody = {
   restaurant: { name: string };
-  menus: Array<{ categories: Array<{ entries: Array<{ name: string; price: number }> }> }>;
+  menus: Array<{ id: string; code: string; title: string; published: boolean }>;
+  categories: Array<{ id: string; entries: Array<{ name: string; price: number; menuIds: string[]; hidden: boolean }> }>;
 };
 
 beforeAll(() => installJwksMock());
@@ -25,30 +26,61 @@ describe('GET /catalog', () => {
   it('returns the catalog when published', async () => {
     const db = createTestDb();
     seedSettings(db, { name: 'Trattoria Test', publication_state: 'published' });
-    seedMenu(db, 'menu-1', 'seated');
-    seedCategory(db, 'cat-1', 'menu-1', 'Antipasti');
+    seedMenu(db, 'menu-1', 'food');
+    seedCategory(db, 'cat-1', 'Antipasti');
     seedEntry(db, 'entry-1', 'cat-1', { name: 'Bruschetta', price: 850 });
+    seedMembership(db, 'menu-1', 'entry-1');
     const res = await testRequest('/catalog', { env: makeDbEnv(db) });
     expect(res.status).toBe(200);
     const body = await res.json() as CatalogBody;
     expect(body.restaurant.name).toBe('Trattoria Test');
     expect(body.menus).toHaveLength(1);
-    expect(body.menus[0].categories).toHaveLength(1);
-    expect(body.menus[0].categories[0].entries[0].name).toBe('Bruschetta');
-    expect(body.menus[0].categories[0].entries[0].price).toBeCloseTo(8.5);
+    expect(body.menus[0].code).toBe('food');
+    expect(body.menus[0].published).toBe(true);
+    expect(body.categories).toHaveLength(1);
+    expect(body.categories[0].entries[0].name).toBe('Bruschetta');
+    expect(body.categories[0].entries[0].price).toBeCloseTo(8.5);
+    expect(body.categories[0].entries[0].menuIds).toEqual(['menu-1']);
   });
 
   it('hides hidden entries from public catalog', async () => {
     const db = createTestDb();
     seedSettings(db);
     seedMenu(db, 'menu-1');
-    seedCategory(db, 'cat-1', 'menu-1');
+    seedCategory(db, 'cat-1');
     seedEntry(db, 'visible', 'cat-1', { name: 'Visible' });
-    seedEntry(db, 'hidden', 'cat-1', { name: 'Hidden', visibility: 'hidden' });
+    seedEntry(db, 'hidden', 'cat-1', { name: 'Hidden', hidden: true });
+    seedMembership(db, 'menu-1', 'visible');
+    seedMembership(db, 'menu-1', 'hidden');
     const res = await testRequest('/catalog', { env: makeDbEnv(db) });
     const body = await res.json() as CatalogBody;
-    const names = body.menus[0].categories[0].entries.map(e => e.name);
+    const names = body.categories[0].entries.map(e => e.name);
     expect(names).toEqual(['Visible']);
+  });
+
+  it('hides unpublished menus from public catalog', async () => {
+    const db = createTestDb();
+    seedSettings(db);
+    seedMenu(db, 'menu-pub', 'food', undefined, { published: true });
+    seedMenu(db, 'menu-draft', 'lunch', undefined, { published: false });
+    const res = await testRequest('/catalog', { env: makeDbEnv(db) });
+    const body = await res.json() as CatalogBody;
+    expect(body.menus.map(m => m.code)).toEqual(['food']);
+  });
+
+  it('exposes membership across multiple menus per entry', async () => {
+    const db = createTestDb();
+    seedSettings(db);
+    seedMenu(db, 'menu-a', 'food');
+    seedMenu(db, 'menu-b', 'lunch');
+    seedCategory(db, 'cat-1');
+    seedEntry(db, 'entry-multi', 'cat-1', { name: 'Tiramisu' });
+    seedMembership(db, 'menu-a', 'entry-multi');
+    seedMembership(db, 'menu-b', 'entry-multi');
+    const res = await testRequest('/catalog', { env: makeDbEnv(db) });
+    const body = await res.json() as CatalogBody;
+    const entry = body.categories[0].entries.find(e => e.name === 'Tiramisu')!;
+    expect(entry.menuIds.sort()).toEqual(['menu-a', 'menu-b']);
   });
 });
 
@@ -57,7 +89,7 @@ describe('POST /catalog/view', () => {
     const db = createTestDb();
     seedSettings(db);
     seedMenu(db, 'menu-1');
-    seedCategory(db, 'cat-1', 'menu-1');
+    seedCategory(db, 'cat-1');
     seedEntry(db, 'entry-1', 'cat-1');
     const res = await testRequest('/catalog/view', {
       method: 'POST',
@@ -86,7 +118,7 @@ describe('POST /catalog/view', () => {
     const db = createTestDb();
     seedSettings(db);
     seedMenu(db, 'menu-1');
-    seedCategory(db, 'cat-1', 'menu-1');
+    seedCategory(db, 'cat-1');
     seedEntry(db, 'entry-1', 'cat-1');
     const env = makeDbEnv(db);
     const send = () => testRequest('/catalog/view', {
@@ -106,7 +138,7 @@ describe('POST /catalog/view', () => {
     const db = createTestDb();
     seedSettings(db);
     seedMenu(db, 'menu-1');
-    seedCategory(db, 'cat-1', 'menu-1');
+    seedCategory(db, 'cat-1');
     seedEntry(db, 'entry-1', 'cat-1');
     const env = makeDbEnv(db);
     await testRequest('/catalog/view', {
@@ -149,7 +181,7 @@ describe('POST /catalog/publish', () => {
     const db = createTestDb();
     seedSettings(db);
     seedMenu(db, 'menu-1');
-    seedCategory(db, 'cat-1', 'menu-1');
+    seedCategory(db, 'cat-1');
     seedEntry(db, 'entry-1', 'cat-1');
     const token = await signTestJwt('admin-1');
     const res = await testRequest('/catalog/publish', {

@@ -322,27 +322,44 @@ export function seedSettings(db: TestDb, fields: Record<string, unknown> = {}): 
     .run(...cols.map((c) => defaults[c]), Date.now());
 }
 
-export function seedMenu(db: TestDb, menuId: string, code = 'seated', title?: string): void {
+export function seedMenu(
+  db: TestDb,
+  menuId: string,
+  code = 'food',
+  title?: string,
+  options: { published?: boolean; sortOrder?: number } = {},
+): void {
   const now = Date.now();
   db.raw.prepare(
-    `INSERT OR IGNORE INTO menus (id, code, title, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(menuId, code, title ?? code, now, now);
+    `INSERT OR IGNORE INTO menus (id, code, title, published, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    menuId,
+    code,
+    title ?? code,
+    options.published === false ? 0 : 1,
+    options.sortOrder ?? 0,
+    now,
+    now,
+  );
 }
 
+/**
+ * Seed a category. Categories are restaurant-wide — `menuId` is no longer part of the schema.
+ * Pass entries to specific menus via seedMembership() after creating the entry.
+ */
 export function seedCategory(
   db: TestDb,
   categoryId: string,
-  menuId: string,
   name = 'Test Category',
   sortOrder = 0,
 ): void {
   const now = Date.now();
   db.raw.prepare(
     `INSERT OR IGNORE INTO menu_categories
-       (id, menu_id, name, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(categoryId, menuId, name, sortOrder, now, now);
+       (id, name, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(categoryId, name, sortOrder, now, now);
 }
 
 export function seedEntry(
@@ -354,7 +371,7 @@ export function seedEntry(
   const now = Date.now();
   db.raw.prepare(
     `INSERT OR IGNORE INTO menu_entries
-       (id, category_id, name, price, sort_order, visibility, out_of_stock, frozen, created_at, updated_at)
+       (id, category_id, name, price, sort_order, hidden, out_of_stock, frozen, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`,
   ).run(
     entryId,
@@ -362,8 +379,14 @@ export function seedEntry(
     (extra.name as string | undefined) ?? 'Test Entry',
     (extra.price as number | undefined) ?? 1000,
     (extra.sortOrder as number | undefined) ?? 0,
-    (extra.visibility as string | undefined) ?? 'all',
+    (extra.hidden as boolean | undefined) ? 1 : 0,
     now,
     now,
   );
+}
+
+export function seedMembership(db: TestDb, menuId: string, entryId: string): void {
+  db.raw.prepare(
+    `INSERT OR IGNORE INTO menu_entry_memberships (menu_id, entry_id) VALUES (?, ?)`,
+  ).run(menuId, entryId);
 }

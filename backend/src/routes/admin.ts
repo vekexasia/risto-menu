@@ -19,8 +19,11 @@ import {
   UpdateEntryBodySchema,
   MoveEntryBodySchema,
   TranslateRequestBodySchema,
+  CreateMenuBodySchema,
+  UpdateMenuBodySchema,
 } from '@menu/schemas';
 import type { AppBindings } from '../types';
+import type { DbInstance } from '../db';
 
 // All admin routes require auth + db + admin gate.
 const admin = new Hono<AppBindings>();
@@ -134,7 +137,141 @@ admin.put('/hours', ...base, async (c) => {
   return c.json({ ok: true });
 });
 
+// ── Menus ────────────────────────────────────────────────────────────
+
+admin.get('/menus', ...base, async (c) => {
+  const rows = await c.get('db')
+    .select()
+    .from(schema.menus)
+    .orderBy(asc(schema.menus.sortOrder), asc(schema.menus.code));
+  return c.json({
+    menus: rows.map((m) => ({
+      id: m.id,
+      code: m.code,
+      title: m.title,
+      i18n: m.i18n,
+      published: m.published,
+      sortOrder: m.sortOrder,
+    })),
+  });
+});
+
+admin.post('/menus', ...base, async (c) => {
+  const body = await parseBody(c, CreateMenuBodySchema);
+  if (body instanceof Response) return body;
+  const db = c.get('db');
+
+  const [existing] = await db
+    .select({ id: schema.menus.id })
+    .from(schema.menus)
+    .where(eq(schema.menus.code, body.code))
+    .limit(1);
+  if (existing) return c.json({ error: 'A menu with that code already exists' }, 409);
+
+  const [{ maxOrder } = { maxOrder: -1 }] = await db
+    .select({ maxOrder: schema.menus.sortOrder })
+    .from(schema.menus)
+    .orderBy(desc(schema.menus.sortOrder))
+    .limit(1) as Array<{ maxOrder: number | null }>;
+
+  const id = crypto.randomUUID();
+  await db.insert(schema.menus).values({
+    id,
+    code: body.code,
+    title: body.title,
+    i18n: body.i18n ?? null,
+    published: true,
+    sortOrder: (maxOrder ?? -1) + 1,
+  });
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, id }, 201);
+});
+
+// /menus/reorder must be registered BEFORE /menus/:menuId to avoid the param matching "reorder".
+admin.patch('/menus/reorder', ...base, async (c) => {
+  const body = await parseBody(c, ReorderItemsBodySchema);
+  if (body instanceof Response) return body;
+  const db = c.get('db');
+
+  for (const item of body.items) {
+    await db
+      .update(schema.menus)
+      .set({ sortOrder: item.order, updatedAt: Date.now() })
+      .where(eq(schema.menus.id, item.id));
+  }
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.patch('/menus/:menuId', ...base, async (c) => {
+  const menuId = c.req.param('menuId');
+  const body = await parseBody(c, UpdateMenuBodySchema);
+  if (body instanceof Response) return body;
+  const db = c.get('db');
+
+  if (body.code !== undefined) {
+    const [existing] = await db
+      .select({ id: schema.menus.id })
+      .from(schema.menus)
+      .where(eq(schema.menus.code, body.code))
+      .limit(1);
+    if (existing && existing.id !== menuId) {
+      return c.json({ error: 'A menu with that code already exists' }, 409);
+    }
+  }
+
+  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  if (body.code !== undefined) updates.code = body.code;
+  if (body.title !== undefined) updates.title = body.title;
+  if (body.i18n !== undefined) updates.i18n = body.i18n;
+  if (body.published !== undefined) updates.published = body.published;
+
+  await db
+    .update(schema.menus)
+    .set(updates)
+    .where(eq(schema.menus.id, menuId));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
+admin.delete('/menus/:menuId', ...base, async (c) => {
+  const menuId = c.req.param('menuId');
+  // FK cascade on menu_entry_memberships removes membership rows automatically.
+  await c.get('db')
+    .delete(schema.menus)
+    .where(eq(schema.menus.id, menuId));
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
 // ── Categories ───────────────────────────────────────────────────────
+
+admin.post('/categories', ...base, async (c) => {
+  const body = await parseBody(c, UpdateCategoryBodySchema);
+  if (body instanceof Response) return body;
+  if (!body.name || !body.name.trim()) return c.json({ error: 'Name required' }, 400);
+  const db = c.get('db');
+
+  const [{ maxOrder } = { maxOrder: -1 }] = await db
+    .select({ maxOrder: schema.menuCategories.sortOrder })
+    .from(schema.menuCategories)
+    .orderBy(desc(schema.menuCategories.sortOrder))
+    .limit(1) as Array<{ maxOrder: number | null }>;
+
+  const id = crypto.randomUUID();
+  await db.insert(schema.menuCategories).values({
+    id,
+    name: body.name.trim(),
+    sortOrder: (maxOrder ?? -1) + 1,
+    i18n: body.i18n ?? null,
+  });
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, id }, 201);
+});
 
 admin.put('/categories/:categoryId', ...base, async (c) => {
   const categoryId = c.req.param('categoryId');
@@ -214,9 +351,9 @@ admin.post('/categories/:categoryId/entries', ...base, async (c) => {
   if (body instanceof Response) return body;
 
   const id = crypto.randomUUID();
-  const visibility = mapVisibility(body.menuVisibility);
+  const db = c.get('db');
 
-  await c.get('db')
+  await db
     .insert(schema.menuEntries)
     .values({
       id,
@@ -229,10 +366,14 @@ admin.post('/categories/:categoryId/entries', ...base, async (c) => {
       outOfStock: body.outOfStock ?? false,
       frozen: body.frozen ?? false,
       sortOrder: body.order ?? 0,
-      visibility,
+      hidden: body.hidden ?? false,
       allergens: body.allergens || null,
       i18n: body.i18n || null,
     });
+
+  if (body.menuIds && body.menuIds.length > 0) {
+    await setEntryMemberships(db, id, body.menuIds);
+  }
 
   await refreshPublicCatalog(c);
   return c.json({ ok: true, id }, 201);
@@ -252,12 +393,17 @@ admin.put('/entries/:entryId', ...base, async (c) => {
   if (body.allergens !== undefined) updates.allergens = body.allergens;
   if (body.priceUnit !== undefined) updates.priceUnit = body.priceUnit;
   if (body.i18n !== undefined) updates.i18n = body.i18n;
-  if (body.menuVisibility !== undefined) updates.visibility = mapVisibility(body.menuVisibility);
+  if (body.hidden !== undefined) updates.hidden = body.hidden;
 
-  await c.get('db')
+  const db = c.get('db');
+  await db
     .update(schema.menuEntries)
     .set(updates)
     .where(eq(schema.menuEntries.id, entryId));
+
+  if (body.menuIds !== undefined) {
+    await setEntryMemberships(db, entryId, body.menuIds);
+  }
 
   await refreshPublicCatalog(c);
   return c.json({ ok: true });
@@ -630,11 +776,15 @@ async function refreshPublicCatalog(c: Context<AppBindings>): Promise<void> {
   }
 }
 
-function mapVisibility(menuVisibility: string[] | undefined): 'all' | 'seated' | 'takeaway' | 'hidden' {
-  if (!menuVisibility || menuVisibility.length === 0) return 'hidden';
-  const first = menuVisibility[0];
-  if (['all', 'seated', 'takeaway'].includes(first)) return first as 'all' | 'seated' | 'takeaway';
-  return 'all';
+async function setEntryMemberships(db: DbInstance, entryId: string, menuIds: string[]): Promise<void> {
+  const unique = Array.from(new Set(menuIds));
+  await db
+    .delete(schema.menuEntryMemberships)
+    .where(eq(schema.menuEntryMemberships.entryId, entryId));
+  if (unique.length === 0) return;
+  await db
+    .insert(schema.menuEntryMemberships)
+    .values(unique.map((menuId) => ({ menuId, entryId })));
 }
 
 async function uploadSettingsImage(

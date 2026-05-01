@@ -8,7 +8,7 @@ describe('demo reset', () => {
     const db = createTestDb();
     seedSettings(db, { name: 'Changed by visitor', publication_state: 'draft' });
     seedMenu(db, 'visitor-menu');
-    seedCategory(db, 'visitor-cat', 'visitor-menu');
+    seedCategory(db, 'visitor-cat');
     seedEntry(db, 'visitor-entry', 'visitor-cat', { name: 'Visitor item' });
 
     await resetDemoData(makeDbEnv(db, { DEMO_MODE: 'true' }));

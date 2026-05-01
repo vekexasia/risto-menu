@@ -16,7 +16,7 @@ async function adminEnv() {
   const db = createTestDb();
   seedSettings(db);
   seedMenu(db, 'menu-1');
-  seedCategory(db, 'cat-1', 'menu-1');
+  seedCategory(db, 'cat-1');
   seedEntry(db, 'entry-1', 'cat-1', { name: 'A' });
   seedEntry(db, 'entry-2', 'cat-1', { name: 'B' });
   const env = makeDbEnv(db, { ADMIN_EMAILS: ADMIN_UID });

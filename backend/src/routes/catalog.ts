@@ -132,7 +132,7 @@ export const catalogRoutes = new Hono<AppBindings>()
 
 // ── Catalog builder ──────────────────────────────────────────────────
 
-type DbInstance = NonNullable<ReturnType<typeof import('../db/index').createDb>>;
+import type { DbInstance } from '../db';
 
 const CATALOG_CACHE_CONTROL = 'public, max-age=60, stale-while-revalidate=300';
 const PUBLIC_CATALOG_VERSION = 'public-v3';
@@ -306,7 +306,8 @@ export async function buildCatalogFromDb(
   const menus = await db
     .select()
     .from(schema.menus)
-    .orderBy(asc(schema.menus.code));
+    .orderBy(asc(schema.menus.sortOrder), asc(schema.menus.code));
+  const visibleMenus = publicOnly ? menus.filter((m) => m.published) : menus;
 
   const categories = await db
     .select()
@@ -317,7 +318,11 @@ export async function buildCatalogFromDb(
     .select()
     .from(schema.menuEntries)
     .orderBy(asc(schema.menuEntries.sortOrder));
-  const visibleEntries = includeHidden ? entries : entries.filter((entry) => entry.visibility !== 'hidden');
+  const visibleEntries = includeHidden ? entries : entries.filter((entry) => !entry.hidden);
+
+  const memberships = await db
+    .select()
+    .from(schema.menuEntryMemberships);
 
   const variants = await db
     .select()
@@ -328,18 +333,18 @@ export async function buildCatalogFromDb(
     .select()
     .from(schema.menuExtras);
 
+  const menuIdsByEntry = new Map<string, string[]>();
+  for (const m of memberships) {
+    const list = menuIdsByEntry.get(m.entryId) || [];
+    list.push(m.menuId);
+    menuIdsByEntry.set(m.entryId, list);
+  }
+
   const entriesByCategory = new Map<string, typeof entries>();
   for (const entry of visibleEntries) {
     const list = entriesByCategory.get(entry.categoryId) || [];
     list.push(entry);
     entriesByCategory.set(entry.categoryId, list);
-  }
-
-  const categoriesByMenu = new Map<string, typeof categories>();
-  for (const cat of categories) {
-    const list = categoriesByMenu.get(cat.menuId) || [];
-    list.push(cat);
-    categoriesByMenu.set(cat.menuId, list);
   }
 
   return {
@@ -359,31 +364,34 @@ export async function buildCatalogFromDb(
         customLocales: restaurant.customLocales ?? [],
       },
     },
-    menus: menus.map((m) => ({
+    menus: visibleMenus.map((m) => ({
       id: m.id,
       code: m.code,
       title: m.title,
       i18n: m.i18n,
-      categories: (categoriesByMenu.get(m.id) || []).map((cat) => ({
-        id: cat.id,
-        name: cat.name,
-        sortOrder: cat.sortOrder,
-        i18n: cat.i18n,
-        entries: (entriesByCategory.get(cat.id) || []).map((e) => ({
-          id: e.id,
-          name: e.name,
-          description: e.description,
-          price: e.price / 100,
-          priceUnit: e.priceUnit,
-          imageUrl: e.imageUrl,
-          outOfStock: e.outOfStock,
-          frozen: e.frozen,
-          sortOrder: e.sortOrder,
-          visibility: e.visibility,
-          allergens: e.allergens,
-          i18n: e.i18n,
-          metadata: e.metadata,
-        })),
+      published: m.published,
+      sortOrder: m.sortOrder,
+    })),
+    categories: categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      sortOrder: cat.sortOrder,
+      i18n: cat.i18n,
+      entries: (entriesByCategory.get(cat.id) || []).map((e) => ({
+        id: e.id,
+        name: e.name,
+        description: e.description,
+        price: e.price / 100,
+        priceUnit: e.priceUnit,
+        imageUrl: e.imageUrl,
+        outOfStock: e.outOfStock,
+        frozen: e.frozen,
+        sortOrder: e.sortOrder,
+        hidden: e.hidden,
+        menuIds: menuIdsByEntry.get(e.id) ?? [],
+        allergens: e.allergens,
+        i18n: e.i18n,
+        metadata: e.metadata,
       })),
     })),
     variants: variants.map((v) => ({

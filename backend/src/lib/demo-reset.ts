@@ -32,18 +32,19 @@ const settings = {
     whatsapp: '+390410000000',
   },
   openingSchedule: {
-    seated: {
-      open: true,
-      schedule: {
-        0: [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
-        1: [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
-        2: [],
-        3: [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
-        4: [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
-        5: [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:30' }],
-        6: [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:30' }],
-      },
-    },
+    open: true,
+    minWaitSlot: 15,
+    slotDuration: 30,
+    maxDaysLookAhead: 7,
+    schedule: [
+      [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
+      [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
+      [],
+      [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
+      [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:00' }],
+      [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:30' }],
+      [{ start: '12:00', end: '15:00' }, { start: '19:00', end: '23:30' }],
+    ],
   },
   promotionAlert: {
     title: 'Demo tasting menu',
@@ -58,18 +59,24 @@ const settings = {
   publicationState: 'published',
 };
 
+const FOOD_MENU_ID = 'demo-menu-food';
+const DRINKS_MENU_ID = 'demo-menu-drinks';
+
 const menus = [
-  { id: 'demo-menu-seated', code: 'seated', title: 'Table menu', i18n: { it: { title: 'Menu al tavolo' }, de: { title: 'Speisekarte' }, fr: { title: 'Menu à table' } } },
-  { id: 'demo-menu-drinks', code: 'takeaway', title: 'Drinks', i18n: { it: { title: 'Bevande' } } },
+  { id: FOOD_MENU_ID, code: 'food', title: 'Food menu', sortOrder: 0, i18n: { it: { title: 'Menu cibo' }, de: { title: 'Speisekarte' }, fr: { title: 'Menu à table' } } },
+  { id: DRINKS_MENU_ID, code: 'drinks', title: 'Drinks', sortOrder: 1, i18n: { it: { title: 'Bevande' } } },
 ];
 
 const categories = [
-  { id: 'demo-cat-starters', menuId: 'demo-menu-seated', name: 'Starters', sortOrder: 0, i18n: { it: { name: 'Antipasti' }, de: { name: 'Vorspeisen' }, fr: { name: 'Entrées' } } },
-  { id: 'demo-cat-pasta', menuId: 'demo-menu-seated', name: 'Pasta', sortOrder: 1, i18n: { it: { name: 'Primi' }, de: { name: 'Pasta' }, fr: { name: 'Pâtes' } } },
-  { id: 'demo-cat-mains', menuId: 'demo-menu-seated', name: 'Main courses', sortOrder: 2, i18n: { it: { name: 'Secondi' }, de: { name: 'Hauptgerichte' }, fr: { name: 'Plats principaux' }, vec: { name: 'Secondi' } } },
-  { id: 'demo-cat-desserts', menuId: 'demo-menu-seated', name: 'Desserts', sortOrder: 3, i18n: { it: { name: 'Dolci' }, de: { name: 'Desserts' }, fr: { name: 'Desserts' } } },
-  { id: 'demo-cat-wines', menuId: 'demo-menu-drinks', name: 'Wine by the glass', sortOrder: 0, i18n: { it: { name: 'Vini al calice' }, de: { name: 'Wein im Glas' }, fr: { name: 'Vins au verre' } } },
+  { id: 'demo-cat-starters', name: 'Starters', sortOrder: 0, i18n: { it: { name: 'Antipasti' }, de: { name: 'Vorspeisen' }, fr: { name: 'Entrées' } } },
+  { id: 'demo-cat-pasta', name: 'Pasta', sortOrder: 1, i18n: { it: { name: 'Primi' }, de: { name: 'Pasta' }, fr: { name: 'Pâtes' } } },
+  { id: 'demo-cat-mains', name: 'Main courses', sortOrder: 2, i18n: { it: { name: 'Secondi' }, de: { name: 'Hauptgerichte' }, fr: { name: 'Plats principaux' }, vec: { name: 'Secondi' } } },
+  { id: 'demo-cat-desserts', name: 'Desserts', sortOrder: 3, i18n: { it: { name: 'Dolci' }, de: { name: 'Desserts' }, fr: { name: 'Desserts' } } },
+  { id: 'demo-cat-wines', name: 'Wine by the glass', sortOrder: 4, i18n: { it: { name: 'Vini al calice' }, de: { name: 'Wein im Glas' }, fr: { name: 'Vins au verre' } } },
 ];
+
+// Categories that belong to the drinks menu (membership is many-to-many on entries; we map by category here for clarity).
+const drinkCategoryIds = new Set(['demo-cat-wines']);
 
 const entries = [
   {
@@ -249,6 +256,7 @@ export async function resetDemoData(env: Env): Promise<void> {
     env.DB.prepare('DELETE FROM catalog_views'),
     env.DB.prepare('DELETE FROM chat_sessions'),
     env.DB.prepare('DELETE FROM audit_events'),
+    env.DB.prepare('DELETE FROM menu_entry_memberships'),
     env.DB.prepare('DELETE FROM menu_entries'),
     env.DB.prepare('DELETE FROM menu_categories'),
     env.DB.prepare('DELETE FROM menus'),
@@ -273,13 +281,15 @@ export async function resetDemoData(env: Env): Promise<void> {
   ];
 
   for (const menu of menus) {
-    statements.push(env.DB.prepare('INSERT INTO menus (id, code, title, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').bind(menu.id, menu.code, menu.title, JSON.stringify(menu.i18n), now, now));
+    statements.push(env.DB.prepare('INSERT INTO menus (id, code, title, i18n, published, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?)').bind(menu.id, menu.code, menu.title, JSON.stringify(menu.i18n), menu.sortOrder, now, now));
   }
   for (const category of categories) {
-    statements.push(env.DB.prepare('INSERT INTO menu_categories (id, menu_id, name, sort_order, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(category.id, category.menuId, category.name, category.sortOrder, JSON.stringify(category.i18n), now, now));
+    statements.push(env.DB.prepare('INSERT INTO menu_categories (id, name, sort_order, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').bind(category.id, category.name, category.sortOrder, JSON.stringify(category.i18n), now, now));
   }
   for (const entry of entries) {
-    statements.push(env.DB.prepare('INSERT INTO menu_entries (id, category_id, name, description, price, image_url, sort_order, visibility, allergens, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(entry.id, entry.categoryId, entry.name, entry.description, entry.price, entry.imageUrl, entry.sortOrder, 'all', JSON.stringify(entry.allergens), JSON.stringify(entry.i18n), now, now));
+    statements.push(env.DB.prepare('INSERT INTO menu_entries (id, category_id, name, description, price, image_url, sort_order, hidden, allergens, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)').bind(entry.id, entry.categoryId, entry.name, entry.description, entry.price, entry.imageUrl, entry.sortOrder, JSON.stringify(entry.allergens), JSON.stringify(entry.i18n), now, now));
+    const menuId = drinkCategoryIds.has(entry.categoryId) ? DRINKS_MENU_ID : FOOD_MENU_ID;
+    statements.push(env.DB.prepare('INSERT INTO menu_entry_memberships (menu_id, entry_id) VALUES (?, ?)').bind(menuId, entry.id));
   }
   for (const variant of variants) {
     statements.push(env.DB.prepare('INSERT INTO menu_variants (id, name, description, sort_order, selections, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(variant.id, variant.name, variant.description, variant.sortOrder, JSON.stringify(variant.selections), JSON.stringify(variant.i18n), now, now));
