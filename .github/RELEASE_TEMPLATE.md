@@ -8,9 +8,18 @@ Drop sections that don't apply, but DO NOT drop "Breaking changes" or
 "Upgrade actions" — leave them with "None." if there are none. Self-hosters
 read these first.
 
-Pull from the matching CHANGELOG.md entry. The release body should be a
-self-contained snapshot — readers should not need to follow a link to know
-whether they have to do something.
+Source material: every PR merged since the previous tag carries one or more
+`release:` labels. PRs labelled `release: breaking`, `release: migration`,
+or `release: upgrade-action` have prefilled prose under their respective
+template sections — copy/aggregate those into the body below. PRs labelled
+only `release: internal` are skipped.
+
+  LAST=$(git describe --tags --abbrev=0)
+  gh pr list --state merged \
+    --search "merged:>$(git log -1 --format=%cI "$LAST")" \
+    --label "release: breaking" --label "release: migration" \
+    --label "release: upgrade-action" \
+    --json number,title,body,labels
 -->
 
 ## Summary
