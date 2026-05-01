@@ -5,3 +5,5 @@ export function createDb(env: Env) {
   if (!env.DB) return null;
   return drizzle(env.DB);
 }
+
+export type DbInstance = NonNullable<ReturnType<typeof createDb>>;

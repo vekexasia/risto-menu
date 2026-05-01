@@ -2,6 +2,7 @@ import {
   customType,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -38,13 +39,6 @@ function jsonColumn<T>(name: string) {
   })(name);
 }
 
-// ── Enum value constants ──────────────────────────────────────────────────────
-// Imported from shared schemas package — single source of truth.
-
-export { MENU_VISIBILITIES } from '@menu/schemas';
-import type { MenuVisibility } from '@menu/schemas';
-export type { MenuVisibility } from '@menu/schemas';
-
 // ── Tables ────────────────────────────────────────────────────────────────────
 
 /**
@@ -77,10 +71,13 @@ export const menus = sqliteTable(
     code: text('code').notNull(),
     title: text('title').notNull(),
     i18n: jsonColumn<Record<string, unknown> | null>('i18n'),
+    published: integer('published', { mode: 'boolean' }).default(true).notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
     ...timestamps,
   },
   (table) => ({
     codeIdx: uniqueIndex('menus_code_idx').on(table.code),
+    sortIdx: index('menus_sort_idx').on(table.sortOrder),
   }),
 );
 
@@ -88,16 +85,13 @@ export const menuCategories = sqliteTable(
   'menu_categories',
   {
     id: text('id').primaryKey(),
-    menuId: text('menu_id')
-      .notNull()
-      .references(() => menus.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
     i18n: jsonColumn<Record<string, unknown> | null>('i18n'),
     ...timestamps,
   },
   (table) => ({
-    menuOrderIdx: index('menu_categories_menu_order_idx').on(table.menuId, table.sortOrder),
+    sortOrderIdx: index('menu_categories_sort_order_idx').on(table.sortOrder),
   }),
 );
 
@@ -118,7 +112,7 @@ export const menuEntries = sqliteTable(
     outOfStock: integer('out_of_stock', { mode: 'boolean' }).default(false).notNull(),
     frozen: integer('frozen', { mode: 'boolean' }).default(false).notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
-    visibility: text('visibility').$type<MenuVisibility>().default('all').notNull(),
+    hidden: integer('hidden', { mode: 'boolean' }).default(false).notNull(),
     allergens: jsonColumn<string[] | null>('allergens'),
     i18n: jsonColumn<Record<string, unknown> | null>('i18n'),
     metadata: jsonColumn<Record<string, unknown> | null>('metadata'),
@@ -126,6 +120,22 @@ export const menuEntries = sqliteTable(
   },
   (table) => ({
     categoryOrderIdx: index('menu_entries_category_order_idx').on(table.categoryId, table.sortOrder),
+  }),
+);
+
+export const menuEntryMemberships = sqliteTable(
+  'menu_entry_memberships',
+  {
+    menuId: text('menu_id')
+      .notNull()
+      .references(() => menus.id, { onDelete: 'cascade' }),
+    entryId: text('entry_id')
+      .notNull()
+      .references(() => menuEntries.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.menuId, table.entryId] }),
+    entryIdx: index('menu_entry_memberships_entry_idx').on(table.entryId),
   }),
 );
 
