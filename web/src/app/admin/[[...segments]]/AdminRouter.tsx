@@ -7,6 +7,7 @@ import AdminContent from "../AdminContent";
 import AdminCategoriesPage from "@/components/admin/pages/CategoriesPage";
 import CategoryEntriesPage from "@/components/admin/pages/EntriesPage";
 import AdminHoursPage from "@/components/admin/pages/HoursPage";
+import AdminMenusPage from "@/components/admin/pages/MenusPage";
 import AdminSettingsPage, { type SettingsSection } from "@/components/admin/pages/SettingsPage";
 import AnalyticsPage from "@/components/admin/pages/AnalyticsPage";
 
@@ -16,6 +17,9 @@ function AdminRouterInner() {
 
   let content: React.ReactNode;
   switch (section) {
+    case "menus":
+      content = <AdminMenusPage />;
+      break;
     case "entries":
       content = <CategoryEntriesPage />;
       break;

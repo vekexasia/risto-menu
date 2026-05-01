@@ -19,23 +19,6 @@ export interface I18nMap {
 }
 
 // ============================================================================
-// Menu Selection Types
-// ============================================================================
-
-/**
- * Menu selection type - determines whether the user is ordering for dine-in or takeaway.
- */
-export type MenuSelection = 'SEATED' | 'TAKEAWAY';
-
-/**
- * Menu visibility options for menu entries.
- * - 'all': Visible on all menus
- * - 'seated': Only visible on seated/dine-in menu
- * - 'takeaway': Only visible on takeaway menu
- */
-export type MenuVisibility = 'all' | 'seated' | 'takeaway';
-
-// ============================================================================
 // Allergen Types
 // ============================================================================
 
@@ -150,10 +133,6 @@ export interface RestaurantMessages {
   intro?: string;
   /** Terms and conditions */
   terms?: string;
-  /** Message shown on cart for seated orders (key: 'onCart.SEATED') */
-  onCartSeated?: string;
-  /** Message shown on cart for takeaway orders (key: 'onCart.TAKEAWAY') */
-  onCartTakeaway?: string;
   /** Message shown when booking is completed */
   onBookingCompleted?: string;
   /** i18n translations for all messages */
@@ -305,40 +284,24 @@ export interface WorkingHours {
 }
 
 /**
- * Opening schedule for both menu types.
- * Corresponds to _OpeningSchedule in Flutter.
+ * Opening schedule. Single restaurant-wide schedule.
  */
-export interface OpeningSchedule {
-  /** Working hours for seated/dine-in service */
-  seated?: WorkingHours;
-  /** Working hours for takeaway service */
-  takeaway?: WorkingHours;
-}
+export type OpeningSchedule = WorkingHours;
 
 // ============================================================================
 // Menu Info Types
 // ============================================================================
 
 /**
- * Information about a specific menu type (seated or takeaway).
- * Corresponds to MenuInfo in Flutter.
+ * A user-defined menu (Food, Drinks, Lunch, Wine list, ...).
  */
 export interface MenuInfo {
-  /** Display title for this menu */
+  id: string;
+  code: string;
   title: string;
-  /** i18n translations for menu title */
   i18n?: I18nMap;
-}
-
-/**
- * Container for both menu types.
- * Corresponds to _Menus in Flutter.
- */
-export interface Menus {
-  /** Seated/dine-in menu configuration */
-  seated?: MenuInfo;
-  /** Takeaway menu configuration */
-  takeaway?: MenuInfo;
+  published: boolean;
+  sortOrder: number;
 }
 
 // ============================================================================
@@ -500,11 +463,10 @@ export interface MenuEntry {
   outOfStock: boolean;
   /** Whether the item contains frozen ingredients */
   containsFrozenIngredient: boolean;
-  /**
-   * Which menus this item is visible on.
-   * Array of visibility strings: 'all', 'seated', 'takeaway'
-   */
-  menuVisibility: MenuVisibility[];
+  /** IDs of menus this entry appears on. Empty = orphan. */
+  menuIds: string[];
+  /** Hidden from public catalog (admin-only). */
+  hidden: boolean;
   /** Allergens present in this item */
   allergens: Allergen[];
   /**
@@ -576,11 +538,11 @@ export interface RestaurantData {
   socials?: RestaurantSocials;
   /** Current promotion alert */
   promotion?: PromotionAlert;
-  /** Opening hours schedule */
+  /** Opening hours schedule (single, restaurant-wide). */
   openingSchedule?: OpeningSchedule;
-  /** Menu type configurations */
-  menus?: Menus;
-  /** Menu categories with entries */
+  /** All defined menus (Food, Drinks, Lunch, ...) sorted by sortOrder. */
+  menus: MenuInfo[];
+  /** Menu categories with entries (flat — categories belong to the restaurant). */
   categories: MenuCategory[];
   /** Feature flags for optional restaurant capabilities */
   features?: {
@@ -635,50 +597,15 @@ export interface User extends BaseUser {
 export type DocumentPath = string;
 
 /**
- * Type guard to check if a value is a valid MenuSelection.
- */
-export function isMenuSelection(value: unknown): value is MenuSelection {
-  return value === 'SEATED' || value === 'TAKEAWAY';
-}
-
-/**
  * Type guard to check if a value is a valid Allergen.
  */
 export function isAllergen(value: unknown): value is Allergen {
   return ALLERGENS.includes(value as Allergen);
 }
 
-/**
- * Get the identifier string for a MenuSelection (lowercase).
- * Corresponds to MenuSelectionExt.toIdentifier() in Flutter.
- */
-export function menuSelectionToIdentifier(selection: MenuSelection): 'seated' | 'takeaway' {
-  return selection === 'SEATED' ? 'seated' : 'takeaway';
-}
-
-/**
- * Get the cart message based on menu selection.
- * Corresponds to RestaurantMessages.onCartMessage() in Flutter.
- */
-export function getOnCartMessage(messages: RestaurantMessages, selection: MenuSelection): string | undefined {
-  return selection === 'SEATED' ? messages.onCartSeated : messages.onCartTakeaway;
-}
-
-/**
- * Check if a menu entry is visible to users on a specific menu.
- * Corresponds to MenuEntry.isVisibleToUser() in Flutter.
- */
-export function isMenuEntryVisible(entry: MenuEntry, menu: MenuSelection): boolean {
-  const identifier = menuSelectionToIdentifier(menu);
-  return entry.menuVisibility.includes('all') || entry.menuVisibility.includes(identifier);
-}
-
-/**
- * Check if a menu entry is only visible to the owner (empty visibility on seated menu).
- * Corresponds to MenuEntry.isVisibleOnlyToOwner() in Flutter.
- */
-export function isMenuEntryOwnerOnly(entry: MenuEntry, menu: MenuSelection): boolean {
-  return entry.menuVisibility.length === 0 && menu === 'SEATED';
+/** Whether an entry is visible to public users on the given menu. */
+export function isMenuEntryVisibleOnMenu(entry: MenuEntry, menuId: string): boolean {
+  return !entry.hidden && entry.menuIds.includes(menuId);
 }
 
 /**

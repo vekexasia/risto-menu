@@ -164,6 +164,7 @@ export default function AdminContent({
     : s("categories");
 
   const gestioneItems: { href: string; icon: string; label: string; count?: number | string }[] = [
+    { href: s("menus"), icon: "fa-book-open", label: "Menus" },
     { href: s("categories"), icon: "fa-layer-group", label: "Categories", count: categories.length },
     { href: entriesHref, icon: "fa-utensils", label: "Items", count: totalEntries },
     { href: s("hours"), icon: "fa-clock", label: "Hours" },

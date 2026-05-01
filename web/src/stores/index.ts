@@ -7,15 +7,6 @@ export {
   useCategories,
 } from './restaurantStore';
 
-// Menu Selection Store
-export {
-  useMenuSelectionStore,
-  useSelection,
-  useIsSeated,
-  useIsTakeaway,
-  useHasSelection,
-} from './menuSelectionStore';
-
 // UI Store
 export {
   useUIStore,

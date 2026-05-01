@@ -1,0 +1,372 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  ApiError,
+  createMenu,
+  deleteMenu,
+  fetchMenus,
+  reorderMenus,
+  updateMenu,
+  type AdminMenu,
+} from "@/lib/api";
+import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
+import { SortableList, DragHandle } from "@/components/admin/SortableList";
+import { TranslationTabs } from "@/components/admin/TranslationTabs";
+
+interface I18nData {
+  [locale: string]: { title?: string };
+}
+
+const CODE_RE = /^[a-z0-9-]+$/;
+
+export default function MenusPage() {
+  const { loadRestaurant } = useRestaurantStore();
+  const categories = useCategories();
+
+  const [menus, setMenus] = useState<AdminMenu[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [creating, setCreating] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const [editing, setEditing] = useState<AdminMenu | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCode, setEditCode] = useState("");
+  const [editI18n, setEditI18n] = useState<I18nData>({});
+  const [activeTab, setActiveTab] = useState("it");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [deleting, setDeleting] = useState<AdminMenu | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoadError(null);
+    try {
+      const res = await fetchMenus();
+      setMenus(res.menus);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Errore caricamento menu");
+    }
+  };
+
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+  }, []);
+
+  // Compute per-menu entry counts using the public catalog the store already loaded.
+  // (Memberships drive these counts, so categories alone aren't enough.)
+  const entryCountByMenu = (() => {
+    const counts = new Map<string, number>();
+    for (const cat of categories) {
+      for (const entry of cat.entries) {
+        for (const id of entry.menuIds) {
+          counts.set(id, (counts.get(id) ?? 0) + 1);
+        }
+      }
+    }
+    return counts;
+  })();
+
+  const handleCreate = async () => {
+    setCreateError(null);
+    const code = newCode.trim().toLowerCase();
+    const title = newTitle.trim();
+    if (!CODE_RE.test(code)) {
+      setCreateError("Codice non valido (minuscolo, cifre, trattini)");
+      return;
+    }
+    if (!title) {
+      setCreateError("Il titolo è obbligatorio");
+      return;
+    }
+    try {
+      await createMenu({ code, title });
+      setCreating(false);
+      setNewCode("");
+      setNewTitle("");
+      await refresh();
+      await loadRestaurant({ force: true });
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Errore creazione menu";
+      setCreateError(msg);
+    }
+  };
+
+  const openEdit = (menu: AdminMenu) => {
+    setEditing(menu);
+    setEditTitle(menu.title);
+    setEditCode(menu.code);
+    setEditI18n((menu.i18n ?? {}) as I18nData);
+    setActiveTab("it");
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    const title = editTitle.trim();
+    const code = editCode.trim().toLowerCase();
+    if (!CODE_RE.test(code)) {
+      setEditError("Codice non valido (minuscolo, cifre, trattini)");
+      return;
+    }
+    if (!title) {
+      setEditError("Il titolo è obbligatorio");
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    try {
+      await updateMenu(editing.id, { title, code, i18n: editI18n as Record<string, Record<string, string>> });
+      setEditing(null);
+      await refresh();
+      await loadRestaurant({ force: true });
+    } catch (err) {
+      setEditError(err instanceof ApiError ? err.message : "Errore salvataggio");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const togglePublished = async (menu: AdminMenu) => {
+    const next = !menu.published;
+    setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, published: next } : m)));
+    try {
+      await updateMenu(menu.id, { published: next });
+      await loadRestaurant({ force: true });
+    } catch {
+      // revert on error
+      setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, published: !next } : m)));
+    }
+  };
+
+  const handleReorder = async (reordered: AdminMenu[]) => {
+    setMenus(reordered.map((m, i) => ({ ...m, sortOrder: i })));
+    try {
+      await reorderMenus(reordered.map((m, i) => ({ id: m.id, order: i })));
+    } catch {
+      await refresh();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setDeletingId(deleting.id);
+    try {
+      await deleteMenu(deleting.id);
+      setDeleting(null);
+      await refresh();
+      await loadRestaurant({ force: true });
+    } catch {
+      // leave dialog open so user can retry
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-gray-500">Caricamento menu...</div>;
+  }
+
+  return (
+    <div className="adm-scroll" style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "20px 24px" }}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="text-xs font-bold uppercase tracking-wide text-primary">Menu</div>
+          <h1 className="text-xl font-bold text-gray-900">Gestione menu</h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Crea menu separati (es. Cibo, Bevande, Pranzo) e assegna ogni piatto ai menu giusti dalla pagina Piatti.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="px-3 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary/90"
+        >
+          + Nuovo menu
+        </button>
+      </div>
+
+      {loadError && (
+        <div className="mb-3 px-3 py-2 rounded bg-red-50 border border-red-200 text-red-700 text-sm">
+          {loadError}
+        </div>
+      )}
+
+      {creating && (
+        <div className="mb-4 p-4 bg-white border rounded-lg">
+          <h3 className="font-semibold text-gray-800 mb-2">Nuovo menu</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              autoFocus
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value)}
+              placeholder="codice (es. food, drinks, lunch)"
+              className="px-3 py-2 border rounded text-sm"
+            />
+            <input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Titolo visualizzato"
+              className="px-3 py-2 border rounded text-sm"
+            />
+          </div>
+          {createError && (
+            <div className="mt-2 text-xs text-red-600">{createError}</div>
+          )}
+          <div className="mt-3 flex gap-2 justify-end">
+            <button
+              onClick={() => { setCreating(false); setCreateError(null); }}
+              className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleCreate}
+              className="px-3 py-2 rounded text-sm font-semibold bg-primary text-white hover:bg-primary/90"
+            >
+              Crea
+            </button>
+          </div>
+        </div>
+      )}
+
+      {menus.length === 0 ? (
+        <div className="p-8 text-center text-gray-500 bg-white rounded-lg border">
+          Nessun menu. Creane uno per iniziare.
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border divide-y">
+          <SortableList
+            items={menus}
+            onReorder={handleReorder}
+            renderItem={(menu, _index, dragHandleProps) => {
+              const entryCount = entryCountByMenu.get(menu.id) ?? 0;
+              return (
+                <div
+                  className={`flex items-center gap-3 p-3 hover:bg-gray-50 ${menu.published ? "" : "opacity-60"}`}
+                >
+                  <DragHandle {...dragHandleProps} />
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openEdit(menu)}>
+                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                      {menu.title}
+                      {!menu.published && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                          Bozza
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      <code>{menu.code}</code> · {entryCount} {entryCount === 1 ? "piatto" : "piatti"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); togglePublished(menu); }}
+                    className={`px-2 py-1 text-xs rounded font-semibold ${
+                      menu.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                    }`}
+                    title={menu.published ? "Pubblicato — clicca per nascondere" : "In bozza — clicca per pubblicare"}
+                  >
+                    {menu.published ? "Pubblicato" : "Bozza"}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleting(menu); }}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded"
+                    title="Elimina menu"
+                  >
+                    <i className="fa-solid fa-trash" style={{ fontSize: 12 }} />
+                  </button>
+                </div>
+              );
+            }}
+          />
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center z-10">
+              <h3 className="font-bold text-lg">Modifica menu</h3>
+              <button onClick={() => setEditing(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Codice (URL slug)</label>
+                <input
+                  value={editCode}
+                  onChange={(e) => setEditCode(e.target.value)}
+                  className="w-full px-3 py-2 border rounded text-sm font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-1">Usato in /menu/{editCode || "..."}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
+                <TranslationTabs
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  fields={[{ key: "title", label: "Titolo", sourceValue: editTitle }]}
+                  i18n={editI18n as Record<string, Record<string, string>>}
+                  onI18nChange={(updated) => setEditI18n(updated as I18nData)}
+                >
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full px-3 py-2 border rounded text-sm"
+                    placeholder="Titolo del menu"
+                  />
+                </TranslationTabs>
+              </div>
+
+              {editError && (
+                <div className="text-sm text-red-600">{editError}</div>
+              )}
+
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditing(null)} className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100">Annulla</button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="px-3 py-2 rounded text-sm font-semibold bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {saving ? "Salvataggio..." : "Salva"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {deleting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-5 max-w-md w-full">
+            <h3 className="font-bold text-lg text-gray-900">Elimina &ldquo;{deleting.title}&rdquo;?</h3>
+            <p className="text-sm text-gray-600 mt-2">
+              I piatti restano ma perdono l&apos;associazione a questo menu. I piatti che erano solo in questo menu finiranno nel filtro &ldquo;Senza menu&rdquo; e potrai riassegnarli.
+            </p>
+            <div className="mt-4 flex gap-2 justify-end">
+              <button onClick={() => setDeleting(null)} className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100">Annulla</button>
+              <button
+                onClick={handleDelete}
+                disabled={deletingId === deleting.id}
+                className="px-3 py-2 rounded text-sm font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingId === deleting.id ? "Eliminazione..." : "Elimina"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

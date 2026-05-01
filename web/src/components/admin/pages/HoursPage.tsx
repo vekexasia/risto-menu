@@ -29,7 +29,7 @@ export default function HoursPage() {
   // Load hours from the restaurant store (populated from D1 catalog)
   useEffect(() => {
     if (!storeData) return;
-    const storedSchedule = storeData.openingSchedule?.seated?.schedule;
+    const storedSchedule = storeData.openingSchedule?.schedule;
     if (storedSchedule) {
       setSchedule(storedSchedule.map((day) => day.map((slot) => ({ start: slot.start, end: slot.end }))));
     }
@@ -71,16 +71,14 @@ export default function HoursPage() {
     setSuccessMessage(null);
 
     try {
-      const existingSeated = storeData?.openingSchedule?.seated;
+      const existing = storeData?.openingSchedule;
       await updateOpeningHours({
-        seated: {
-          open: existingSeated?.open ?? true,
-          bookable: existingSeated?.bookable,
-          minWaitSlot: existingSeated?.minWaitSlot ?? 0,
-          slotDuration: existingSeated?.slotDuration ?? 15,
-          maxDaysLookAhead: existingSeated?.maxDaysLookAhead ?? 12,
-          schedule,
-        },
+        open: existing?.open ?? true,
+        bookable: existing?.bookable,
+        minWaitSlot: existing?.minWaitSlot ?? 0,
+        slotDuration: existing?.slotDuration ?? 15,
+        maxDaysLookAhead: existing?.maxDaysLookAhead ?? 12,
+        schedule,
       });
 
       setSuccessMessage("Orari salvati con successo!");

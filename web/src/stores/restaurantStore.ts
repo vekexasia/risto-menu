@@ -4,9 +4,11 @@ import type {
   RestaurantData,
   Variant,
   Extra,
+  MenuInfo,
   MenuCategory,
   MenuEntry,
   Allergen,
+  WorkingHours,
 } from '../lib/types';
 
 interface RestaurantState {
@@ -131,66 +133,78 @@ function catalogToStore(catalog: CatalogResponse) {
     });
   }
 
-  const categories: MenuCategory[] = [];
-  for (const menu of catalog.menus) {
-    for (const cat of menu.categories) {
-      const catPath = `menuEntries/${cat.id}`;
-      const entries: MenuEntry[] = cat.entries.map((e) => ({
-        id: e.id,
-        path: `${catPath}/entries/${e.id}`,
-        categoryPath: catPath,
-        name: e.name,
-        price: Number(e.price) || 0,
-        description: e.description || '',
-        image: e.imageUrl || undefined,
-        order: e.sortOrder,
-        minQuantity: (e.metadata?.minQuantity as number) || 1,
-        priceUnit: e.priceUnit || undefined,
-        outOfStock: e.outOfStock,
-        containsFrozenIngredient: e.frozen,
-        allergens: (e.allergens || []) as Allergen[],
-        menuVisibility: e.visibility === 'hidden' ? [] : [e.visibility as 'all' | 'seated' | 'takeaway'],
-        overriddenVariantPaths: (e.metadata?.variantRefs as string[]) || [],
-        overriddenExtraPaths: (e.metadata?.extraRefs as string[]) || [],
-        i18n: e.i18n as Record<string, Record<string, string>> | undefined,
-      }));
+  const menus: MenuInfo[] = catalog.menus
+    .map((m) => ({
+      id: m.id,
+      code: m.code,
+      title: m.title,
+      i18n: m.i18n as Record<string, Record<string, string>> | undefined,
+      published: m.published,
+      sortOrder: m.sortOrder,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
-      const category: MenuCategory = {
-        id: cat.id,
-        path: catPath,
-        name: cat.name,
-        order: cat.sortOrder,
-        entries,
-        variantPaths: [],
-        extraPaths: [],
-        i18n: cat.i18n as Record<string, Record<string, string>> | undefined,
-      };
-      categories.push(category);
-      categoriesCache.set(catPath, category);
-    }
+  const categories: MenuCategory[] = [];
+  for (const cat of catalog.categories) {
+    const catPath = `menuEntries/${cat.id}`;
+    const entries: MenuEntry[] = cat.entries.map((e) => ({
+      id: e.id,
+      path: `${catPath}/entries/${e.id}`,
+      categoryPath: catPath,
+      name: e.name,
+      price: Number(e.price) || 0,
+      description: e.description || '',
+      image: e.imageUrl || undefined,
+      order: e.sortOrder,
+      minQuantity: (e.metadata?.minQuantity as number) || 1,
+      priceUnit: e.priceUnit || undefined,
+      outOfStock: e.outOfStock,
+      containsFrozenIngredient: e.frozen,
+      allergens: (e.allergens || []) as Allergen[],
+      menuIds: e.menuIds,
+      hidden: e.hidden,
+      overriddenVariantPaths: (e.metadata?.variantRefs as string[]) || [],
+      overriddenExtraPaths: (e.metadata?.extraRefs as string[]) || [],
+      i18n: e.i18n as Record<string, Record<string, string>> | undefined,
+    }));
+
+    const category: MenuCategory = {
+      id: cat.id,
+      path: catPath,
+      name: cat.name,
+      order: cat.sortOrder,
+      entries,
+      variantPaths: [],
+      extraPaths: [],
+      i18n: cat.i18n as Record<string, Record<string, string>> | undefined,
+    };
+    categories.push(category);
+    categoriesCache.set(catPath, category);
   }
 
   categories.sort((a, b) => a.order - b.order);
 
-  const apiSchedule = r.openingSchedule as Record<string, Record<string, unknown>> | null;
-  const openingSchedule = apiSchedule?.seated ? {
-    seated: {
-      open: (apiSchedule.seated.open as boolean) ?? true,
-      bookable: apiSchedule.seated.bookable as boolean | undefined,
-      minWaitSlot: (apiSchedule.seated.minWaitSlot as number) ?? 0,
-      slotDuration: (apiSchedule.seated.slotDuration as number) ?? 15,
-      maxDaysLookAhead: (apiSchedule.seated.maxDaysLookAhead as number) ?? 12,
-      schedule: (() => {
-        const sched: Array<Array<{ start: string; end: string }>> = [];
-        const raw = apiSchedule.seated as Record<string, unknown>;
-        for (let i = 0; i < 7; i++) {
-          const daySlots = (raw[`schedule.${i}`] || (raw.schedule as Record<string, unknown>)?.[String(i)] || []) as Array<{ start: string; end: string }>;
-          sched.push(daySlots);
-        }
-        return sched;
-      })(),
-    },
-  } : undefined;
+  const apiSchedule = r.openingSchedule as Record<string, unknown> | null;
+  const openingSchedule: WorkingHours | undefined = apiSchedule
+    ? {
+        open: (apiSchedule.open as boolean) ?? true,
+        bookable: apiSchedule.bookable as boolean | undefined,
+        minWaitSlot: (apiSchedule.minWaitSlot as number) ?? 0,
+        slotDuration: (apiSchedule.slotDuration as number) ?? 15,
+        maxDaysLookAhead: (apiSchedule.maxDaysLookAhead as number) ?? 12,
+        schedule: (() => {
+          const sched: Array<Array<{ start: string; end: string }>> = [];
+          for (let i = 0; i < 7; i++) {
+            const day =
+              (apiSchedule[`schedule.${i}`] as Array<{ start: string; end: string }> | undefined) ??
+              ((apiSchedule.schedule as Array<unknown> | Record<string, unknown> | undefined)?.[i as never] as Array<{ start: string; end: string }> | undefined) ??
+              [];
+            sched.push(day);
+          }
+          return sched;
+        })(),
+      }
+    : undefined;
 
   const data: RestaurantData = {
     id: 'singleton',
@@ -222,7 +236,7 @@ function catalogToStore(catalog: CatalogResponse) {
       whatsapp: (r.socials as Record<string, string>).whatsapp,
     } : undefined,
     messages: undefined,
-    menus: undefined,
+    menus,
     openingSchedule,
     categories,
     promotion: undefined,

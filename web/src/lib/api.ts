@@ -17,6 +17,8 @@ import type {
   UpdateCategoryBody,
   CreateEntryBody,
   UpdateEntryBody,
+  CreateMenuBody,
+  UpdateMenuBody,
   CatalogResponse,
   MeResponse,
   AnalyticsResponse,
@@ -144,6 +146,54 @@ export function updateOpeningHours(openingSchedule: UpdateHoursBody['openingSche
     auth: true,
   });
 }
+
+// ── Menus ────────────────────────────────────────────────────────────
+
+export interface AdminMenu {
+  id: string;
+  code: string;
+  title: string;
+  i18n: Record<string, Record<string, string>> | null;
+  published: boolean;
+  sortOrder: number;
+}
+
+export function fetchMenus() {
+  return apiFetch<{ menus: AdminMenu[] }>(`/admin/menus`, { auth: true });
+}
+
+export function createMenu(data: CreateMenuBody) {
+  return apiFetch<CreatedEntryResponse>(`/admin/menus`, {
+    method: 'POST',
+    body: data,
+    auth: true,
+  });
+}
+
+export function updateMenu(menuId: string, data: UpdateMenuBody) {
+  return apiFetch(`/admin/menus/${menuId}`, {
+    method: 'PATCH',
+    body: data,
+    auth: true,
+  });
+}
+
+export function deleteMenu(menuId: string) {
+  return apiFetch(`/admin/menus/${menuId}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
+export function reorderMenus(items: { id: string; order: number }[]) {
+  return apiFetch(`/admin/menus/reorder`, {
+    method: 'PATCH',
+    body: { items },
+    auth: true,
+  });
+}
+
+// ── Categories / Entries ─────────────────────────────────────────────
 
 export function createCategory(data: { name: string }) {
   return apiFetch<{ id: string }>(`/admin/categories`, {

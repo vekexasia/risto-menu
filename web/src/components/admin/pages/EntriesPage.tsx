@@ -13,14 +13,6 @@ import { TranslationTabs } from "@/components/admin/TranslationTabs";
 const STANDARD_TRANSLATION_LOCALES = ["en", "de", "fr", "es", "nl", "ru", "pt"];
 const TRANSLATE_THROTTLE_MS = 2200; // Gentle pacing: ~27 requests/min, below backend's 30/min limit.
 
-// Visibility options for menu items
-const VISIBILITY_OPTIONS = [
-  { value: "all", label: "Tutti", description: "Tavolo + Bevande" },
-  { value: "seated", label: "Solo Tavolo", description: "Menu al tavolo" },
-  { value: "takeaway", label: "Solo Bevande", description: "Menu bevande" },
-  { value: "hidden", label: "Nascosto", description: "Solo proprietario" },
-];
-
 // All available allergens
 const ALLERGENS = [
   { id: "Glutine", label: "Glutine" },
@@ -58,7 +50,8 @@ interface MenuEntry {
   allergens: string[];
   priceUnit?: string;
   i18n?: I18nData;
-  menuVisibility: string[];
+  menuIds: string[];
+  hidden: boolean;
 }
 
 interface Category {
@@ -185,6 +178,8 @@ export default function EntriesPage() {
   // Reorder mode state
   const [reorderMode, setReorderMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  /** Menu filter: "ALL" = no filter, "NONE" = entries with no menu memberships, otherwise a menu id. */
+  const [menuFilter, setMenuFilter] = useState<string>("ALL");
   // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<MenuEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -262,7 +257,8 @@ export default function EntriesPage() {
       allergens: (e.allergens || []) as string[],
       priceUnit: e.priceUnit,
       i18n: (e.i18n || {}) as I18nData,
-      menuVisibility: e.menuVisibility as string[],
+      menuIds: e.menuIds,
+      hidden: e.hidden,
     }));
 
     setEntries(loadedEntries);
@@ -302,8 +298,16 @@ export default function EntriesPage() {
     ].filter((code) => !disabledTranslationLocales.includes(code)))
   );
 
-  const hiddenEntriesCount = entries.filter((e) => e.menuVisibility.length === 0).length;
-  const visibleEntries = (showHidden || reorderMode) ? entries : entries.filter((e) => e.menuVisibility.length > 0);
+  const allMenus = restaurantData?.menus ?? [];
+  const hiddenEntriesCount = entries.filter((e) => e.hidden || e.menuIds.length === 0).length;
+  const filteredByMenu = menuFilter === "ALL"
+    ? entries
+    : menuFilter === "NONE"
+      ? entries.filter((e) => e.menuIds.length === 0)
+      : entries.filter((e) => e.menuIds.includes(menuFilter));
+  const visibleEntries = (showHidden || reorderMode)
+    ? filteredByMenu
+    : filteredByMenu.filter((e) => !e.hidden && e.menuIds.length > 0);
 
   const missingTranslationLocales = (entry: MenuEntry) =>
     adminTranslationLocales.filter((locale) => {
@@ -399,7 +403,8 @@ export default function EntriesPage() {
         allergens: editingEntry.allergens,
         priceUnit: editingEntry.priceUnit || undefined,
         i18n: sanitizeI18nData(editingEntry.i18n),
-        menuVisibility: editingEntry.menuVisibility,
+        menuIds: editingEntry.menuIds,
+        hidden: editingEntry.hidden,
       };
 
       await updateEntry(editingEntry.id, entryPayload);
@@ -432,6 +437,7 @@ export default function EntriesPage() {
   // Create new entry
   const handleAddEntry = () => {
     const maxOrder = entries.length > 0 ? Math.max(...entries.map(e => e.order)) + 1 : 0;
+    const defaultMenuIds = (restaurantData?.menus ?? []).map((m) => m.id);
     const newEntry: MenuEntry = {
       id: "", // Will be set after creation
       name: "",
@@ -441,7 +447,8 @@ export default function EntriesPage() {
       outOfStock: false,
       frozen: false,
       allergens: [],
-      menuVisibility: ["all"],
+      menuIds: defaultMenuIds,
+      hidden: false,
     };
     setEditingEntry(newEntry);
     setIsNewEntry(true);
@@ -466,7 +473,8 @@ export default function EntriesPage() {
         allergens: editingEntry.allergens,
         priceUnit: editingEntry.priceUnit || undefined,
         i18n: sanitizeI18nData(editingEntry.i18n),
-        menuVisibility: editingEntry.menuVisibility,
+        menuIds: editingEntry.menuIds,
+        hidden: editingEntry.hidden,
       });
       const newId = res.id;
 
@@ -716,6 +724,20 @@ export default function EntriesPage() {
           </h2>
         </div>
         <div className="flex items-center gap-2">
+          {allMenus.length > 0 && !reorderMode && (
+            <select
+              value={menuFilter}
+              onChange={(e) => setMenuFilter(e.target.value)}
+              className="px-2 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 border-0"
+              title="Filtra per menu"
+            >
+              <option value="ALL">Tutti i menu</option>
+              {allMenus.map((m) => (
+                <option key={m.id} value={m.id}>{m.title}</option>
+              ))}
+              <option value="NONE">Senza menu</option>
+            </select>
+          )}
           {hiddenEntriesCount > 0 && !reorderMode && (
             <button
               onClick={() => setShowHidden((v) => !v)}
@@ -937,8 +959,16 @@ export default function EntriesPage() {
                     {formatPrice(entry.price, entry.priceUnit)}
                   </p>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {entry.menuVisibility.length === 0 && (
+                    {entry.hidden && (
                       <span className="text-xs text-orange-500 font-medium">NASCOSTO</span>
+                    )}
+                    {entry.menuIds.length === 0 && (
+                      <span className="text-xs text-amber-600 font-medium">NESSUN MENU</span>
+                    )}
+                    {allMenus.length > 1 && entry.menuIds.length > 0 && entry.menuIds.length < allMenus.length && (
+                      <span className="text-xs text-gray-500 font-medium">
+                        {allMenus.filter((m) => entry.menuIds.includes(m.id)).map((m) => m.title).join(" · ")}
+                      </span>
                     )}
                     {entry.outOfStock && (
                       <span className="text-xs text-red-500 font-medium">ESAURITO</span>
@@ -1246,48 +1276,58 @@ export default function EntriesPage() {
                 </label>
               </div>
 
-              {/* Visibility */}
+              {/* Menu memberships */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Visibilità
+                  Menu
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {VISIBILITY_OPTIONS.map((option) => {
-                    const isSelected =
-                      option.value === "hidden"
-                        ? editingEntry.menuVisibility.length === 0
-                        : editingEntry.menuVisibility.includes(option.value);
-                    return (
-                      <label
-                        key={option.value}
-                        className={`flex flex-col p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-primary/10 border-primary"
-                            : "bg-white border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="visibility"
-                          checked={isSelected}
-                          onChange={() => {
-                            const newVisibility =
-                              option.value === "hidden"
-                                ? []
-                                : [option.value];
-                            setEditingEntry({
-                              ...editingEntry,
-                              menuVisibility: newVisibility,
-                            });
-                          }}
-                          className="sr-only"
-                        />
-                        <span className="text-sm font-medium">{option.label}</span>
-                        <span className="text-xs text-gray-500">{option.description}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                {allMenus.length === 0 ? (
+                  <p className="text-xs text-gray-500">Nessun menu definito. Crea un menu prima di assegnare il piatto.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {allMenus.map((menu) => {
+                      const isSelected = editingEntry.menuIds.includes(menu.id);
+                      return (
+                        <label
+                          key={menu.id}
+                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-primary/10 border-primary"
+                              : "bg-white border-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              const next = isSelected
+                                ? editingEntry.menuIds.filter((id) => id !== menu.id)
+                                : [...editingEntry.menuIds, menu.id];
+                              setEditingEntry({ ...editingEntry, menuIds: next });
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="flex-1">
+                            <span className="block text-sm font-medium">{menu.title}</span>
+                            <span className="block text-xs text-gray-500">{menu.code}</span>
+                          </span>
+                          {isSelected && (
+                            <span className="text-primary text-sm">✓</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                <label className="flex items-center gap-2 mt-3">
+                  <input
+                    type="checkbox"
+                    checked={editingEntry.hidden}
+                    onChange={(e) => setEditingEntry({ ...editingEntry, hidden: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Nascondi al pubblico (visibile solo nell&apos;admin)</span>
+                </label>
               </div>
 
               {/* Allergens */}
