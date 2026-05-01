@@ -114,8 +114,37 @@ cd web/workers/chat && npm run test:run
 cd web/workers/chat && npm run deploy
 ```
 
+## Upgrading
+
+When pulling a new version of Risto Menu into an existing self-hosted deployment:
+
+```bash
+git pull
+npm install
+
+# 1. Apply any new D1 migrations on the remote database BEFORE deploying
+#    new worker code. Drizzle skips already-applied migrations automatically.
+(cd backend && npx wrangler d1 migrations apply menu-db --remote)
+
+# 2. Deploy the backend (and chat worker if changed).
+(cd backend && npm run deploy)
+(cd web/workers/chat && npm run deploy)
+
+# 3. Deploy the frontend.
+(cd web && npm run deploy:cf)
+```
+
+There is a brief window during step 2 where the migrated DB is being served by
+the previous worker revision. For low-traffic deployments this is invisible;
+for high-traffic ones, expect a few seconds of 5xx until the new revision
+propagates.
+
+Per-release migration notes (data backfill rules, breaking API shape changes,
+admin UI changes that require operator action) live in [CHANGELOG.md](CHANGELOG.md).
+
 ## Documentation
 
+- [Changelog](CHANGELOG.md) — per-release notes including upgrade hints
 - [Self-hosting guide](docs/self-hosting.md) — deploy your own copy
 - [Secrets & env vars](docs/secrets-and-env-vars.md) — full reference
 - [Architecture & coding conventions](CLAUDE.md)
