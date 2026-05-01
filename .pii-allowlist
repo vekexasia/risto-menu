@@ -4,6 +4,7 @@
 # ── Public URLs that aren't PII ──
 ^https?://(www\.)?keepachangelog\.com(/.*)?$
 ^https?://(www\.)?nextjs\.org(/.*)?$
+^https?://github\.com/vekexasia/risto-menu(/.*)?$
 
 # ── Drizzle snapshot identifiers ──
 # drizzle generates a fresh UUID for each migration snapshot's `id`/`prevId`.
