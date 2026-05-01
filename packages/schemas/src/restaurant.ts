@@ -66,10 +66,7 @@ export const WorkingHoursSchema = z.object({
 });
 export type WorkingHours = z.infer<typeof WorkingHoursSchema>;
 
-export const OpeningScheduleSchema = z.object({
-  seated: WorkingHoursSchema.optional(),
-  takeaway: WorkingHoursSchema.optional(),
-});
+export const OpeningScheduleSchema = WorkingHoursSchema;
 export type OpeningSchedule = z.infer<typeof OpeningScheduleSchema>;
 
 export const RestaurantMessagesSchema = z.object({
@@ -77,8 +74,6 @@ export const RestaurantMessagesSchema = z.object({
   allergens: z.string().optional(),
   intro: z.string().optional(),
   terms: z.string().optional(),
-  onCartSeated: z.string().optional(),
-  onCartTakeaway: z.string().optional(),
   onBookingCompleted: z.string().optional(),
   i18n: I18nMapSchema.optional(),
 });

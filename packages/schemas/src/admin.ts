@@ -51,7 +51,8 @@ export const CreateEntryBodySchema = z.object({
   allergens: z.array(z.string()).optional(),
   priceUnit: z.string().optional(),
   i18n: I18nMapSchema.optional(),
-  menuVisibility: z.array(z.string()).optional(),
+  menuIds: z.array(z.string()).optional(),
+  hidden: z.boolean().optional(),
 });
 export type CreateEntryBody = z.infer<typeof CreateEntryBodySchema>;
 
@@ -64,7 +65,8 @@ export const UpdateEntryBodySchema = z.object({
   allergens: z.array(z.string()).optional(),
   priceUnit: z.string().optional(),
   i18n: I18nMapSchema.optional(),
-  menuVisibility: z.array(z.string()).optional(),
+  menuIds: z.array(z.string()).optional(),
+  hidden: z.boolean().optional(),
 });
 export type UpdateEntryBody = z.infer<typeof UpdateEntryBodySchema>;
 
@@ -72,6 +74,23 @@ export const MoveEntryBodySchema = z.object({
   targetCategoryId: z.string(),
 });
 export type MoveEntryBody = z.infer<typeof MoveEntryBodySchema>;
+
+// ── Menus ───────────────────────────────────────────────────────────
+
+export const CreateMenuBodySchema = z.object({
+  code: z.string().trim().min(1).max(50).regex(/^[a-z0-9-]+$/, 'lowercase, digits, hyphens only'),
+  title: z.string().trim().min(1).max(120),
+  i18n: I18nMapSchema.optional(),
+});
+export type CreateMenuBody = z.infer<typeof CreateMenuBodySchema>;
+
+export const UpdateMenuBodySchema = z.object({
+  code: z.string().trim().min(1).max(50).regex(/^[a-z0-9-]+$/).optional(),
+  title: z.string().trim().min(1).max(120).optional(),
+  i18n: I18nMapSchema.optional(),
+  published: z.boolean().optional(),
+});
+export type UpdateMenuBody = z.infer<typeof UpdateMenuBodySchema>;
 
 // ── Restaurants ─────────────────────────────────────────────────────
 

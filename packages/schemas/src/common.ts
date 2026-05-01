@@ -2,11 +2,6 @@ import { z } from 'zod';
 
 // ── Enums ───────────────────────────────────────────────────────────
 
-export const MenuVisibilitySchema = z.enum(['all', 'seated', 'takeaway', 'hidden']);
-export type MenuVisibility = z.infer<typeof MenuVisibilitySchema>;
-
-export const MENU_VISIBILITIES = MenuVisibilitySchema.options;
-
 export const MembershipRoleSchema = z.enum(['owner', 'manager', 'editor', 'staff']);
 export type MembershipRole = z.infer<typeof MembershipRoleSchema>;
 
@@ -34,9 +29,6 @@ export const ALLERGENS = AllergenSchema.options;
 
 export const ExtrasTypeSchema = z.enum(['zeroorone', 'zeroormulti']);
 export type ExtrasType = z.infer<typeof ExtrasTypeSchema>;
-
-export const MenuSelectionSchema = z.enum(['SEATED', 'TAKEAWAY']);
-export type MenuSelection = z.infer<typeof MenuSelectionSchema>;
 
 export const AnalyticsPeriodSchema = z.enum(['24h', '7d', '30d', 'all']);
 export type AnalyticsPeriod = z.infer<typeof AnalyticsPeriodSchema>;

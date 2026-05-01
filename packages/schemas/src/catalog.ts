@@ -13,7 +13,8 @@ export const CatalogEntrySchema = z.object({
   outOfStock: z.boolean(),
   frozen: z.boolean(),
   sortOrder: z.number(),
-  visibility: z.string(),
+  hidden: z.boolean(),
+  menuIds: z.array(z.string()),
   allergens: z.array(z.string()).nullable(),
   i18n: I18nMapSchema.nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
@@ -34,7 +35,8 @@ export const CatalogMenuSchema = z.object({
   code: z.string(),
   title: z.string(),
   i18n: I18nMapSchema.nullable(),
-  categories: z.array(CatalogCategorySchema),
+  published: z.boolean(),
+  sortOrder: z.number(),
 });
 export type CatalogMenu = z.infer<typeof CatalogMenuSchema>;
 
@@ -79,6 +81,7 @@ export type CatalogRestaurant = z.infer<typeof CatalogRestaurantSchema>;
 export const CatalogResponseSchema = z.object({
   restaurant: CatalogRestaurantSchema,
   menus: z.array(CatalogMenuSchema),
+  categories: z.array(CatalogCategorySchema),
   variants: z.array(CatalogVariantSchema),
   extras: z.array(CatalogExtraSchema),
   generatedAt: z.string(),
