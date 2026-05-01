@@ -13,6 +13,7 @@ import {
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { SortableList, DragHandle } from "@/components/admin/SortableList";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
+import { MenuIcon, MENU_ICON_KINDS, MENU_ICON_LABELS, type MenuIconKind } from "@/components/menu/MenuIcon";
 
 interface I18nData {
   [locale: string]: { title?: string };
@@ -37,6 +38,7 @@ export default function MenusPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editCode, setEditCode] = useState("");
   const [editI18n, setEditI18n] = useState<I18nData>({});
+  const [editIcon, setEditIcon] = useState<MenuIconKind>("utensils");
   const [activeTab, setActiveTab] = useState("it");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -102,6 +104,7 @@ export default function MenusPage() {
     setEditTitle(menu.title);
     setEditCode(menu.code);
     setEditI18n((menu.i18n ?? {}) as I18nData);
+    setEditIcon((MENU_ICON_KINDS as readonly string[]).includes(menu.icon) ? (menu.icon as MenuIconKind) : "utensils");
     setActiveTab("it");
     setEditError(null);
   };
@@ -121,7 +124,7 @@ export default function MenusPage() {
     setSaving(true);
     setEditError(null);
     try {
-      await updateMenu(editing.id, { title, code, i18n: editI18n as Record<string, Record<string, string>> });
+      await updateMenu(editing.id, { title, code, icon: editIcon, i18n: editI18n as Record<string, Record<string, string>> });
       setEditing(null);
       await refresh();
       await loadRestaurant({ force: true });
@@ -306,7 +309,32 @@ export default function MenusPage() {
                   onChange={(e) => setEditCode(e.target.value)}
                   className="w-full px-3 py-2 border rounded text-sm font-mono"
                 />
-                <p className="text-xs text-gray-500 mt-1">Usato in /menu/{editCode || "..."}</p>
+                <p className="text-xs text-gray-500 mt-1">Usato in /menu?type={editCode || "..."}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Icona</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {MENU_ICON_KINDS.map((kind) => {
+                    const selected = kind === editIcon;
+                    return (
+                      <button
+                        key={kind}
+                        type="button"
+                        onClick={() => setEditIcon(kind)}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border transition-colors ${
+                          selected ? "bg-primary/10 border-primary text-primary" : "bg-white border-gray-200 hover:bg-gray-50 text-gray-600"
+                        }`}
+                        title={MENU_ICON_LABELS[kind]}
+                      >
+                        <div className="w-7 h-7">
+                          <MenuIcon kind={kind} />
+                        </div>
+                        <span className="text-[10px] font-medium uppercase tracking-wide">{MENU_ICON_LABELS[kind]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

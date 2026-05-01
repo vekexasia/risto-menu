@@ -302,6 +302,8 @@ export interface MenuInfo {
   i18n?: I18nMap;
   published: boolean;
   sortOrder: number;
+  /** Curated icon kind — see MENU_ICON_KINDS in components/menu/MenuIcon. */
+  icon: string;
 }
 
 // ============================================================================

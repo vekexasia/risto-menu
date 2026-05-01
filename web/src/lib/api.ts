@@ -156,6 +156,7 @@ export interface AdminMenu {
   i18n: Record<string, Record<string, string>> | null;
   published: boolean;
   sortOrder: number;
+  icon: string;
 }
 
 export function fetchMenus() {

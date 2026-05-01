@@ -9,6 +9,7 @@ import { useParams } from "next/navigation";
 import { useRestaurantStore } from "@/stores/restaurantStore";
 import { RestaurantInfoModal } from "@/components/menu/RestaurantInfoModal";
 import { PromotionPopup } from "@/components/menu/PromotionPopup";
+import { MenuIcon } from "@/components/menu/MenuIcon";
 import { LanguagePicker } from "@/components/ui/LanguagePicker";
 import { getContentDisplayText } from "@/lib/content-presentation";
 
@@ -184,9 +185,7 @@ export default function HomePage() {
                   className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center aspect-square hover:shadow-xl transition-shadow"
                 >
                   <div className="w-24 h-24 mb-4 flex items-center justify-center text-primary/70">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-full h-full">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                    </svg>
+                    <MenuIcon kind={menu.icon} />
                   </div>
                   <span className="text-lg font-semibold text-gray-800 uppercase tracking-wide text-center">
                     <span className="block">{title.primary}</span>

@@ -73,6 +73,7 @@ export const menus = sqliteTable(
     i18n: jsonColumn<Record<string, unknown> | null>('i18n'),
     published: integer('published', { mode: 'boolean' }).default(true).notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
+    icon: text('icon').default('utensils').notNull(),
     ...timestamps,
   },
   (table) => ({

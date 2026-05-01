@@ -371,6 +371,7 @@ export async function buildCatalogFromDb(
       i18n: m.i18n,
       published: m.published,
       sortOrder: m.sortOrder,
+      icon: m.icon,
     })),
     categories: categories.map((cat) => ({
       id: cat.id,

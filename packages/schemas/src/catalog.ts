@@ -30,6 +30,28 @@ export const CatalogCategorySchema = z.object({
 });
 export type CatalogCategory = z.infer<typeof CatalogCategorySchema>;
 
+/**
+ * Curated set of standard icons that the home page renders inline as SVG.
+ * Stored as a string to allow forward-compat with future additions without a
+ * schema rev. Keep in sync with the `<MenuIcon>` component on the web side.
+ */
+export const MENU_ICONS = [
+  'utensils',
+  'wine',
+  'beer',
+  'cocktail',
+  'coffee',
+  'pizza',
+  'burger',
+  'dessert',
+  'salad',
+  'fish',
+  'bread',
+  'breakfast',
+] as const;
+export const MenuIconSchema = z.enum(MENU_ICONS);
+export type MenuIcon = z.infer<typeof MenuIconSchema>;
+
 export const CatalogMenuSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -37,6 +59,7 @@ export const CatalogMenuSchema = z.object({
   i18n: I18nMapSchema.nullable(),
   published: z.boolean(),
   sortOrder: z.number(),
+  icon: z.string(),
 });
 export type CatalogMenu = z.infer<typeof CatalogMenuSchema>;
 

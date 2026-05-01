@@ -141,6 +141,7 @@ function catalogToStore(catalog: CatalogResponse) {
       i18n: m.i18n as Record<string, Record<string, string>> | undefined,
       published: m.published,
       sortOrder: m.sortOrder,
+      icon: m.icon,
     }))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 

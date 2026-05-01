@@ -152,6 +152,7 @@ admin.get('/menus', ...base, async (c) => {
       i18n: m.i18n,
       published: m.published,
       sortOrder: m.sortOrder,
+      icon: m.icon,
     })),
   });
 });
@@ -182,6 +183,7 @@ admin.post('/menus', ...base, async (c) => {
     i18n: body.i18n ?? null,
     published: true,
     sortOrder: (maxOrder ?? -1) + 1,
+    ...(body.icon ? { icon: body.icon } : {}),
   });
 
   await refreshPublicCatalog(c);
@@ -227,6 +229,7 @@ admin.patch('/menus/:menuId', ...base, async (c) => {
   if (body.title !== undefined) updates.title = body.title;
   if (body.i18n !== undefined) updates.i18n = body.i18n;
   if (body.published !== undefined) updates.published = body.published;
+  if (body.icon !== undefined) updates.icon = body.icon;
 
   await db
     .update(schema.menus)

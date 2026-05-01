@@ -63,8 +63,8 @@ const FOOD_MENU_ID = 'demo-menu-food';
 const DRINKS_MENU_ID = 'demo-menu-drinks';
 
 const menus = [
-  { id: FOOD_MENU_ID, code: 'food', title: 'Food menu', sortOrder: 0, i18n: { it: { title: 'Menu cibo' }, de: { title: 'Speisekarte' }, fr: { title: 'Menu à table' } } },
-  { id: DRINKS_MENU_ID, code: 'drinks', title: 'Drinks', sortOrder: 1, i18n: { it: { title: 'Bevande' } } },
+  { id: FOOD_MENU_ID, code: 'food', title: 'Food menu', sortOrder: 0, icon: 'utensils', i18n: { it: { title: 'Menu cibo' }, de: { title: 'Speisekarte' }, fr: { title: 'Menu à table' } } },
+  { id: DRINKS_MENU_ID, code: 'drinks', title: 'Drinks', sortOrder: 1, icon: 'wine', i18n: { it: { title: 'Bevande' } } },
 ];
 
 const categories = [
@@ -281,7 +281,7 @@ export async function resetDemoData(env: Env): Promise<void> {
   ];
 
   for (const menu of menus) {
-    statements.push(env.DB.prepare('INSERT INTO menus (id, code, title, i18n, published, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?)').bind(menu.id, menu.code, menu.title, JSON.stringify(menu.i18n), menu.sortOrder, now, now));
+    statements.push(env.DB.prepare('INSERT INTO menus (id, code, title, i18n, published, sort_order, icon, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)').bind(menu.id, menu.code, menu.title, JSON.stringify(menu.i18n), menu.sortOrder, menu.icon, now, now));
   }
   for (const category of categories) {
     statements.push(env.DB.prepare('INSERT INTO menu_categories (id, name, sort_order, i18n, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').bind(category.id, category.name, category.sortOrder, JSON.stringify(category.i18n), now, now));

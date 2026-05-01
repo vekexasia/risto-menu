@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { I18nMapSchema } from './common.js';
+import { MenuIconSchema } from './catalog.js';
 import { RestaurantInfoSchema, RestaurantSocialsSchema, PromotionAlertSchema, OpeningScheduleSchema } from './restaurant.js';
 
 // ── Restaurant Settings ─────────────────────────────────────────────
@@ -81,6 +82,7 @@ export const CreateMenuBodySchema = z.object({
   code: z.string().trim().min(1).max(50).regex(/^[a-z0-9-]+$/, 'lowercase, digits, hyphens only'),
   title: z.string().trim().min(1).max(120),
   i18n: I18nMapSchema.optional(),
+  icon: MenuIconSchema.optional(),
 });
 export type CreateMenuBody = z.infer<typeof CreateMenuBodySchema>;
 
@@ -89,6 +91,7 @@ export const UpdateMenuBodySchema = z.object({
   title: z.string().trim().min(1).max(120).optional(),
   i18n: I18nMapSchema.optional(),
   published: z.boolean().optional(),
+  icon: MenuIconSchema.optional(),
 });
 export type UpdateMenuBody = z.infer<typeof UpdateMenuBodySchema>;
 
