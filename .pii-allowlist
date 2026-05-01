@@ -5,6 +5,11 @@
 ^https?://(www\.)?keepachangelog\.com(/.*)?$
 ^https?://(www\.)?nextjs\.org(/.*)?$
 ^https?://github\.com/vekexasia/risto-menu(/.*)?$
+# RFC 2606 reserved example domains used in test fixtures.
+^https?://([a-z0-9-]+\.)*example\.(com|org|net)(/.*)?$
+# test.local fake hostname used in worker integration tests.
+^https?://test\.local(/.*)?$
+test\.local
 
 # ── Drizzle snapshot identifiers ──
 # drizzle generates a fresh UUID for each migration snapshot's `id`/`prevId`.
@@ -35,3 +40,6 @@
 (?i)^prosecco$
 (?i)^merlot$
 (?i)^carbonara$
+# Italian regions used in custom-locale fixtures (not personal names).
+(?i)^veneto$
+(?i)^v[èe]neto$

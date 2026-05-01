@@ -59,7 +59,7 @@ export const settings = sqliteTable('settings', {
   aiChatEnabled: integer('ai_chat_enabled', { mode: 'boolean' }).default(false).notNull(),
   enabledLocales: jsonColumn<string[] | null>('enabled_locales'),
   disabledLocales: jsonColumn<string[] | null>('disabled_locales'),
-  customLocales: jsonColumn<{ code: string; name: string }[] | null>('custom_locales'),
+  customLocales: jsonColumn<{ code: string; name: string; flagUrl?: string | null }[] | null>('custom_locales'),
   publicationState: text('publication_state').default('draft').notNull(),
   ...timestamps,
 });

@@ -586,6 +586,73 @@ admin.post('/promotion-image', ...base, async (c) => {
   return c.json({ ok: true, imageUrl: upload.imageUrl });
 });
 
+admin.post('/locale-flag/:code', ...base, async (c) => {
+  const code = c.req.param('code');
+  if (!/^[a-z0-9-]{2,10}$/.test(code)) {
+    return c.json({ error: 'Invalid locale code' }, 400);
+  }
+
+  const db = c.get('db');
+  const [row] = await db
+    .select({ customLocales: schema.settings.customLocales })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1))
+    .limit(1);
+  const list = row?.customLocales ?? [];
+  const target = list.find((l) => l.code === code);
+  if (!target) return c.json({ error: 'Custom locale not found' }, 404);
+
+  const upload = await uploadSettingsImage(c, `flag-${code}`);
+  if ('response' in upload) return upload.response;
+
+  const bucket = c.env.PUBLIC_MENU_BUCKET;
+  if (target.flagUrl && bucket) {
+    const oldKey = r2KeyFromUrl(target.flagUrl);
+    if (oldKey) await bucket.delete(oldKey);
+  }
+
+  const updated = list.map((l) => l.code === code ? { ...l, flagUrl: upload.imageUrl } : l);
+  await db
+    .update(schema.settings)
+    .set({ customLocales: updated, updatedAt: Date.now() })
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true, flagUrl: upload.imageUrl });
+});
+
+admin.delete('/locale-flag/:code', ...base, async (c) => {
+  const code = c.req.param('code');
+  if (!/^[a-z0-9-]{2,10}$/.test(code)) {
+    return c.json({ error: 'Invalid locale code' }, 400);
+  }
+
+  const db = c.get('db');
+  const [row] = await db
+    .select({ customLocales: schema.settings.customLocales })
+    .from(schema.settings)
+    .where(eq(schema.settings.id, 1))
+    .limit(1);
+  const list = row?.customLocales ?? [];
+  const target = list.find((l) => l.code === code);
+  if (!target) return c.json({ error: 'Custom locale not found' }, 404);
+
+  const bucket = c.env.PUBLIC_MENU_BUCKET;
+  if (target.flagUrl && bucket) {
+    const oldKey = r2KeyFromUrl(target.flagUrl);
+    if (oldKey) await bucket.delete(oldKey);
+  }
+
+  const updated = list.map((l) => l.code === code ? { ...l, flagUrl: null } : l);
+  await db
+    .update(schema.settings)
+    .set({ customLocales: updated, updatedAt: Date.now() })
+    .where(eq(schema.settings.id, 1));
+
+  await refreshPublicCatalog(c);
+  return c.json({ ok: true });
+});
+
 // ── Analytics ────────────────────────────────────────────────────────
 
 admin.get('/analytics', ...base, async (c) => {

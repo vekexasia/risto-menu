@@ -3,8 +3,10 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { updateRestaurantSettings, setMenuPublished, fetchRestaurantSettings } from "@/lib/api";
-import { uploadHeaderImage, uploadPromotionalImage } from "@/lib/imageUpload";
+import { uploadHeaderImage, uploadPromotionalImage, uploadLocaleFlag } from "@/lib/imageUpload";
+import { deleteLocaleFlag } from "@/lib/api";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
+import { Flag } from "@/components/ui/Flag";
 import { useRestaurantStore } from "@/stores/restaurantStore";
 import { locales } from "@/lib/i18n-config";
 
@@ -171,10 +173,12 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
   const { data: restaurantStoreData, loadRestaurant } = useRestaurantStore();
   const [enabledLocales, setEnabledLocales] = useState<string[]>(STANDARD_NON_IT);
   const [disabledLocales, setDisabledLocales] = useState<string[]>([]);
-  const [customLocales, setCustomLocales] = useState<{ code: string; name: string }[]>([]);
+  const [customLocales, setCustomLocales] = useState<{ code: string; name: string; flagUrl?: string | null }[]>([]);
   const [newLocaleCode, setNewLocaleCode] = useState("");
   const [newLocaleName, setNewLocaleName] = useState("");
-  const [editingLocale, setEditingLocale] = useState<{ code: string; name: string } | null>(null);
+  const [editingLocale, setEditingLocale] = useState<{ code: string; name: string; flagUrl?: string | null } | null>(null);
+  const [uploadingFlagFor, setUploadingFlagFor] = useState<string | null>(null);
+  const flagInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const [uploadingPromo, setUploadingPromo] = useState(false);
@@ -583,7 +587,6 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                 {/* Standard locales */}
                 <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Standard</p>
                 {STANDARD_NON_IT.map((locale) => {
-                  const FLAG: Record<string, string> = { en: "🇬🇧", de: "🇩🇪", fr: "🇫🇷", es: "🇪🇸", nl: "🇳🇱", ru: "🇷🇺", pt: "🇵🇹" };
                   const LABEL: Record<string, string> = { en: "English", de: "Deutsch", fr: "Français", es: "Español", nl: "Nederlands", ru: "Русский", pt: "Português" };
                   const CODE: Record<string, string> = { en: "EN", de: "DE", fr: "FR", es: "ES", nl: "NL", ru: "RU", pt: "PT" };
                   const state: "off" | "hidden" | "live" = disabledLocales.includes(locale) ? "off" : enabledLocales.includes(locale) ? "live" : "hidden";
@@ -594,8 +597,8 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                   return (
                     <div key={locale} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Flag code={locale} label={LABEL[locale]} />
                         <span style={{ fontSize: 11, fontWeight: 700, color: T.off, background: T.offBg, borderRadius: 4, padding: "1px 5px" }}>{CODE[locale]}</span>
-                        <span style={{ fontSize: 18 }}>{FLAG[locale]}</span>
                         <span style={{ fontSize: 13, color: T.text }}>{LABEL[locale]}</span>
                       </div>
                       <div style={{ display: "flex", gap: 4 }}>
@@ -636,14 +639,64 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                     setDisabledLocales((prev) => s === "off" ? [...prev.filter((l) => l !== cl.code), cl.code] : prev.filter((l) => l !== cl.code));
                   };
                   const isEditing = editingLocale?.code === cl.code;
+                  const flagInputId = `flag-input-${cl.code}`;
+                  const onFlagSelected = async (file: File) => {
+                    setUploadingFlagFor(cl.code);
+                    try {
+                      const url = await uploadLocaleFlag(cl.code, file);
+                      setCustomLocales((prev) => prev.map((l) => l.code === cl.code ? { ...l, flagUrl: url } : l));
+                    } finally {
+                      setUploadingFlagFor(null);
+                    }
+                  };
+                  const onFlagRemove = async () => {
+                    setUploadingFlagFor(cl.code);
+                    try {
+                      await deleteLocaleFlag(cl.code);
+                      setCustomLocales((prev) => prev.map((l) => l.code === cl.code ? { ...l, flagUrl: null } : l));
+                    } finally {
+                      setUploadingFlagFor(null);
+                    }
+                  };
                   return (
                     <div key={cl.code} style={{ borderBottom: `1px solid ${T.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Flag code={cl.code} customUrl={cl.flagUrl ?? null} label={cl.name} />
                           <span style={{ fontSize: 11, fontWeight: 700, color: T.accentDeep, background: T.accentLight, borderRadius: 4, padding: "1px 5px" }}>{cl.code.toUpperCase()}</span>
                           <span style={{ fontSize: 13, color: T.text }}>{cl.name}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <input
+                            ref={(el) => { flagInputRefs.current[cl.code] = el; }}
+                            id={flagInputId}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void onFlagSelected(file);
+                              e.target.value = "";
+                            }}
+                          />
+                          <button
+                            type="button"
+                            disabled={uploadingFlagFor === cl.code}
+                            onClick={() => flagInputRefs.current[cl.code]?.click()}
+                            style={{ fontSize: 11, color: T.accentDeep, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", opacity: uploadingFlagFor === cl.code ? 0.5 : 1 }}
+                          >
+                            {uploadingFlagFor === cl.code ? "Caricamento…" : (cl.flagUrl ? "Cambia bandiera" : "Carica bandiera")}
+                          </button>
+                          {cl.flagUrl && (
+                            <button
+                              type="button"
+                              disabled={uploadingFlagFor === cl.code}
+                              onClick={onFlagRemove}
+                              style={{ fontSize: 11, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                            >
+                              Rimuovi bandiera
+                            </button>
+                          )}
                           <button type="button" onClick={() => setEditingLocale(isEditing ? null : { ...cl })} style={{ fontSize: 11, color: T.accentDeep, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
                             {isEditing ? "Annulla" : "Modifica"}
                           </button>

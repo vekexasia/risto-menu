@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "@/lib/i18n";
 import { useRestaurantStore } from "@/stores/restaurantStore";
+import { Flag } from "@/components/ui/Flag";
 
 const ALL_LANGUAGE_OPTIONS = [
   { code: "it", label: "Italiano" },
@@ -38,6 +39,12 @@ export function LanguagePicker({ variant = 'floating' }: LanguagePickerProps = {
   const query = searchParams.toString();
 
   const enabledLocales = useRestaurantStore((s) => s.data?.features?.enabledLocales);
+  const customLocales = useRestaurantStore((s) => s.data?.features?.customLocales);
+  const customFlagByCode = useMemo(() => {
+    const map: Record<string, string | null | undefined> = {};
+    for (const cl of customLocales ?? []) map[cl.code] = cl.flagUrl;
+    return map;
+  }, [customLocales]);
   const languageOptions = useMemo(() => {
     if (enabledLocales == null) return ALL_LANGUAGE_OPTIONS;
     return ALL_LANGUAGE_OPTIONS.filter(
@@ -146,7 +153,10 @@ export function LanguagePicker({ variant = 'floating' }: LanguagePickerProps = {
                   : "text-gray-700 hover:bg-gray-50"
               }`}
             >
-              <span>{option.label}</span>
+              <span className="flex items-center gap-2">
+                <Flag code={option.code} customUrl={customFlagByCode[option.code]} decorative />
+                {option.label}
+              </span>
               {isActive && (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -175,20 +185,11 @@ export function LanguagePicker({ variant = 'floating' }: LanguagePickerProps = {
       onClick={() => setOpen((value) => !value)}
       className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-lg"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.8}
-        stroke="currentColor"
-        className="h-4 w-4 text-gray-500"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 21a9 9 0 1 0 0-18m0 18c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.966 8.966 0 0 1 7.5 4.032M12 3a8.966 8.966 0 0 0-7.5 4.032m15 0A8.959 8.959 0 0 1 21 12c0 1.61-.424 3.12-1.167 4.425M4.5 7.032A8.959 8.959 0 0 0 3 12c0 1.61.424 3.12 1.167 4.425M19.833 16.425A8.944 8.944 0 0 1 12 21a8.944 8.944 0 0 1-7.833-4.575"
-        />
-      </svg>
+      <Flag
+        code={currentLanguage.code}
+        customUrl={customFlagByCode[currentLanguage.code]}
+        decorative
+      />
       <span>{currentLanguage.label}</span>
       <svg
         xmlns="http://www.w3.org/2000/svg"

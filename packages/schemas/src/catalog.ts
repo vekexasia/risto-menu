@@ -98,7 +98,7 @@ export const CatalogRestaurantSchema = z.object({
     aiChat: z.boolean(),
     enabledLocales: z.array(z.string()).nullable().optional(),
     disabledLocales: z.array(z.string()).nullable().optional(),
-    customLocales: z.array(z.object({ code: z.string(), name: z.string() })).nullable().optional(),
+    customLocales: z.array(z.object({ code: z.string(), name: z.string(), flagUrl: z.string().nullable().optional() })).nullable().optional(),
   }).optional(),
 });
 export type CatalogRestaurant = z.infer<typeof CatalogRestaurantSchema>;

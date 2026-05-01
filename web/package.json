@@ -27,7 +27,9 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@headlessui/react": "^2.2.9",
     "@hookform/resolvers": "^5.2.2",
+    "@menu/schemas": "*",
     "clsx": "^2.1.1",
+    "country-flag-icons": "^1.6.16",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.25.0",
     "next": "^16.1.1",
@@ -38,8 +40,7 @@
     "react-intersection-observer": "^10.0.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.5",
-    "zustand": "^5.0.9",
-    "@menu/schemas": "*"
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.0.0",

@@ -15,7 +15,7 @@ export const UpdateSettingsBodySchema = z.object({
   aiChatEnabled: z.boolean().optional(),
   enabledLocales: z.array(z.string()).nullable().optional(),
   disabledLocales: z.array(z.string()).nullable().optional(),
-  customLocales: z.array(z.object({ code: z.string().min(2).max(10).regex(/^[a-z0-9-]+$/), name: z.string().min(1).max(50) })).nullable().optional(),
+  customLocales: z.array(z.object({ code: z.string().min(2).max(10).regex(/^[a-z0-9-]+$/), name: z.string().min(1).max(50), flagUrl: z.string().url().nullable().optional() })).nullable().optional(),
 });
 export type UpdateSettingsBody = z.infer<typeof UpdateSettingsBodySchema>;
 

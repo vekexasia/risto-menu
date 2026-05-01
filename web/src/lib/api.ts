@@ -300,6 +300,22 @@ export function uploadPromotionImage(imageData: ArrayBuffer) {
   });
 }
 
+export function uploadLocaleFlag(code: string, imageData: ArrayBuffer) {
+  return apiFetch<{ ok: true; flagUrl: string }>(`/admin/locale-flag/${encodeURIComponent(code)}`, {
+    method: 'POST',
+    body: imageData,
+    headers: { 'Content-Type': 'image/jpeg' },
+    auth: true,
+  });
+}
+
+export function deleteLocaleFlag(code: string) {
+  return apiFetch<{ ok: true }>(`/admin/locale-flag/${encodeURIComponent(code)}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
 export function publishCatalog() {
   return apiFetch(`/catalog/publish`, {
     method: 'POST',

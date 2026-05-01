@@ -555,7 +555,7 @@ export interface RestaurantData {
     /** Locales completely disabled (not shown in admin or frontend). */
     disabledLocales?: string[] | null;
     /** Admin-defined custom locales (non-ISO, e.g. Veneto). */
-    customLocales?: { code: string; name: string }[] | null;
+    customLocales?: { code: string; name: string; flagUrl?: string | null }[] | null;
   };
 }
 

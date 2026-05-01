@@ -3,19 +3,18 @@
 import { useState } from "react";
 import { locales, type Locale } from "@/lib/i18n-config";
 import { translateText } from "@/lib/api";
+import { Flag } from "@/components/ui/Flag";
 
-// Standard locales with ISO flag emojis
-const STANDARD_LOCALE_META: Record<string, { label: string; flag: string }> = {
-  en: { label: "English", flag: "🇬🇧" },
-  de: { label: "Deutsch", flag: "🇩🇪" },
-  fr: { label: "Français", flag: "🇫🇷" },
-  es: { label: "Español", flag: "🇪🇸" },
-  nl: { label: "Nederlands", flag: "🇳🇱" },
-  ru: { label: "Русский", flag: "🇷🇺" },
-  pt: { label: "Português", flag: "🇵🇹" },
+const STANDARD_LOCALE_META: Record<string, { label: string }> = {
+  en: { label: "English" },
+  de: { label: "Deutsch" },
+  fr: { label: "Français" },
+  es: { label: "Español" },
+  nl: { label: "Nederlands" },
+  ru: { label: "Русский" },
+  pt: { label: "Português" },
 };
 
-// Standard non-Italian locales from i18n-config (en, de only — vec is a custom locale)
 const STANDARD_LOCALES: Locale[] = (locales as readonly string[]).filter(
   (l): l is Locale => l !== "it" && l in STANDARD_LOCALE_META
 );
@@ -44,7 +43,7 @@ interface TranslationTabsProps {
   /** Disabled non-Italian locales — completely hidden from admin and frontend. */
   disabledLocales?: string[] | null;
   /** Admin-defined custom locales (e.g. [{code:"vec", name:"Veneto"}]) */
-  customLocales?: { code: string; name: string }[] | null;
+  customLocales?: { code: string; name: string; flagUrl?: string | null }[] | null;
 }
 
 async function callTranslateApi(
@@ -69,9 +68,9 @@ export function TranslationTabs({
 }: TranslationTabsProps) {
   // Filter out disabled locales — they are completely hidden from admin.
   const disabledSet = new Set(disabledLocales ?? []);
-  const allLocales: { code: string; label: string; flag?: string }[] = [
-    ...STANDARD_LOCALES.map((l) => ({ code: l, ...STANDARD_LOCALE_META[l] })),
-    ...(customLocales ?? []).map((cl) => ({ code: cl.code, label: cl.name })),
+  const allLocales: { code: string; label: string; customFlagUrl?: string | null }[] = [
+    ...STANDARD_LOCALES.map((l) => ({ code: l, label: STANDARD_LOCALE_META[l].label })),
+    ...(customLocales ?? []).map((cl) => ({ code: cl.code, label: cl.name, customFlagUrl: cl.flagUrl ?? null })),
   ].filter((l) => !disabledSet.has(l.code));
   const [translating, setTranslating] = useState<Record<string, boolean>>({});
 
@@ -230,12 +229,12 @@ export function TranslationTabs({
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
-          <span>🇮🇹</span>
+          <Flag code="it" decorative />
           <span>Italiano</span>
         </button>
 
         {/* Non-Italian locales */}
-        {allLocales.map(({ code, label, flag }) => {
+        {allLocales.map(({ code, label, customFlagUrl }) => {
           const complete = isLocaleComplete(code);
           const isActive = activeTab === code;
           const isPublic = enabledLocales == null || enabledLocales.includes(code);
@@ -252,13 +251,7 @@ export function TranslationTabs({
                   : "bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
               }`}
             >
-              {flag ? (
-                <span>{flag}</span>
-              ) : (
-                <span className={`text-xs font-bold tracking-wide ${isActive ? "text-white/80" : "text-gray-400"}`}>
-                  {code.toUpperCase()}
-                </span>
-              )}
+              <Flag code={code} customUrl={customFlagUrl} decorative />
               <span>{label}</span>
               {!isPublic && (
                 <span className={`text-xs px-1 rounded-full leading-4 ${isActive ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-400"}`}>
