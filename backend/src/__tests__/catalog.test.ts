@@ -68,6 +68,21 @@ describe('GET /catalog', () => {
     expect(body.menus.map(m => m.code)).toEqual(['food']);
   });
 
+  it('surfaces the per-menu icon in the catalog response', async () => {
+    const db = createTestDb();
+    seedSettings(db);
+    seedMenu(db, 'menu-food', 'food');
+    seedMenu(db, 'menu-drinks', 'drinks');
+    db.raw.prepare("UPDATE menus SET icon = 'wine' WHERE id = ?").run('menu-drinks');
+    const res = await testRequest('/catalog', { env: makeDbEnv(db) });
+    const body = await res.json() as CatalogBody;
+    const food = body.menus.find(m => m.code === 'food');
+    const drinks = body.menus.find(m => m.code === 'drinks');
+    // food kept the schema default 'utensils', drinks was overridden to 'wine'.
+    expect((food as unknown as { icon: string }).icon).toBe('utensils');
+    expect((drinks as unknown as { icon: string }).icon).toBe('wine');
+  });
+
   it('exposes membership across multiple menus per entry', async () => {
     const db = createTestDb();
     seedSettings(db);

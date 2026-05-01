@@ -261,6 +261,73 @@ describe('Menus CRUD', () => {
     expect(same.status).toBe(200);
   });
 
+  it('POST /admin/menus accepts an icon and the catalog surfaces it', async () => {
+    const { db, env, headers } = await adminEnv();
+
+    const res = await testRequest('/admin/menus', {
+      method: 'POST', headers, env,
+      body: { code: 'lunch', title: 'Pranzo', icon: 'lunch' },
+    });
+    expect(res.status).toBe(201);
+    const created = await res.json() as { id: string };
+    const row = db.raw.prepare('SELECT icon FROM menus WHERE id = ?').get(created.id) as { icon: string };
+    expect(row.icon).toBe('lunch');
+  });
+
+  it('POST /admin/menus defaults icon to "utensils" when omitted', async () => {
+    const { db, env, headers } = await adminEnv();
+
+    const res = await testRequest('/admin/menus', {
+      method: 'POST', headers, env,
+      body: { code: 'food', title: 'Cibo' },
+    });
+    expect(res.status).toBe(201);
+    const created = await res.json() as { id: string };
+    const row = db.raw.prepare('SELECT icon FROM menus WHERE id = ?').get(created.id) as { icon: string };
+    expect(row.icon).toBe('utensils');
+  });
+
+  it('POST /admin/menus rejects an unknown icon kind with 400', async () => {
+    const { env, headers } = await adminEnv();
+    const res = await testRequest('/admin/menus', {
+      method: 'POST', headers, env,
+      body: { code: 'food', title: 'Cibo', icon: 'spaceship' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('PATCH /admin/menus/:id can update just the icon', async () => {
+    const { db, env, headers } = await adminEnv();
+    seedMenu(db, 'm-1', 'food', 'Food');
+    expect((db.raw.prepare('SELECT icon FROM menus WHERE id = ?').get('m-1') as { icon: string }).icon).toBe('utensils');
+
+    const res = await testRequest('/admin/menus/m-1', {
+      method: 'PATCH', headers, env, body: { icon: 'wine' },
+    });
+    expect(res.status).toBe(200);
+    expect((db.raw.prepare('SELECT icon FROM menus WHERE id = ?').get('m-1') as { icon: string }).icon).toBe('wine');
+  });
+
+  it('PATCH /admin/menus/:id rejects an unknown icon kind with 400', async () => {
+    const { db, env, headers } = await adminEnv();
+    seedMenu(db, 'm-1', 'food');
+    const res = await testRequest('/admin/menus/m-1', {
+      method: 'PATCH', headers, env, body: { icon: 'banjo' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('GET /admin/menus surfaces the icon field', async () => {
+    const { db, env, headers } = await adminEnv();
+    seedMenu(db, 'm-1', 'food');
+    db.raw.prepare("UPDATE menus SET icon = 'wine' WHERE id = ?").run('m-1');
+
+    const res = await testRequest('/admin/menus', { headers, env });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { menus: Array<{ id: string; icon: string }> };
+    expect(body.menus.find(m => m.id === 'm-1')?.icon).toBe('wine');
+  });
+
   it('PATCH /admin/menus/reorder updates sort_order', async () => {
     const { db, env, headers } = await adminEnv();
     seedMenu(db, 'a', 'food', 'A', { sortOrder: 0 });

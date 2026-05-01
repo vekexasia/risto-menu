@@ -125,3 +125,41 @@ describe('0001_multi_menu migration', () => {
     expect(schedule.minWaitSlot).toBe(1);
   });
 });
+
+describe('0002_menu_icon migration', () => {
+  it('adds menus.icon NOT NULL with default "utensils" and backfills existing rows', () => {
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    applyMigration(db, '0000_initial.sql');
+    applyMigration(db, '0001_multi_menu.sql');
+
+    // Seed two menus BEFORE the icon column exists, then run 0002.
+    const now = Date.now();
+    db.exec(`
+      INSERT INTO menus (id, code, title, published, sort_order, created_at, updated_at) VALUES
+        ('m-food',   'food',   'Food',   1, 0, ${now}, ${now}),
+        ('m-drinks', 'drinks', 'Drinks', 1, 1, ${now}, ${now});
+    `);
+
+    applyMigration(db, '0002_menu_icon.sql');
+
+    const cols = db.prepare("PRAGMA table_info(menus)").all() as Array<{ name: string; notnull: number; dflt_value: string | null }>;
+    const iconCol = cols.find((c) => c.name === 'icon');
+    expect(iconCol).toBeDefined();
+    expect(iconCol?.notnull).toBe(1);
+    expect(iconCol?.dflt_value).toBe("'utensils'");
+
+    // Existing rows get the default applied.
+    const rows = db.prepare('SELECT id, icon FROM menus ORDER BY id').all();
+    expect(rows).toEqual([
+      { id: 'm-drinks', icon: 'utensils' },
+      { id: 'm-food',   icon: 'utensils' },
+    ]);
+
+    // New inserts that omit `icon` also get the default — confirms it's a real
+    // column default, not just a one-shot UPDATE inside the migration.
+    db.prepare('INSERT INTO menus (id, code, title, published, sort_order, created_at, updated_at) VALUES (?, ?, ?, 1, 2, ?, ?)').run('m-lunch', 'lunch', 'Lunch', now, now);
+    const lunch = db.prepare('SELECT icon FROM menus WHERE id = ?').get('m-lunch') as { icon: string };
+    expect(lunch.icon).toBe('utensils');
+  });
+});
