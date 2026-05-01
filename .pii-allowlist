@@ -1,6 +1,10 @@
 # Narrow allowlist for git-shield false positives in this repo.
 # One regex per line. See https://github.com/vekexasia/git-shield#allowlist
 
+# ── Public URLs that aren't PII ──
+^https?://(www\.)?keepachangelog\.com(/.*)?$
+^https?://(www\.)?nextjs\.org(/.*)?$
+
 # ── Drizzle snapshot identifiers ──
 # drizzle generates a fresh UUID for each migration snapshot's `id`/`prevId`.
 # These appear in backend/drizzle/meta/*_snapshot.json and are not secrets.
