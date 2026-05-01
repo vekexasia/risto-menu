@@ -179,7 +179,7 @@ export default function HomePage() {
               return (
                 <Link
                   key={menu.id}
-                  href={`/${locale}/menu/${menu.code}`}
+                  href={`/${locale}/menu?type=${menu.code}`}
                   data-locale-anchor={`home:menu-${menu.code}`}
                   className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center aspect-square hover:shadow-xl transition-shadow"
                 >

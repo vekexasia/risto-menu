@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTranslations } from "@/lib/i18n";
 import Image from "next/image";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { MenuItemDetail } from "@/components/menu/MenuItemDetail";
 import { RestaurantInfoModal } from "@/components/menu/RestaurantInfoModal";
@@ -26,10 +26,12 @@ type MenuEntryWithDetails = MenuEntry & { description?: string; image?: string; 
 export default function MenuPageClient() {
   const t = useTranslations();
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const locale = params.locale as string;
-  const menuCodeParam = (params.code as string | undefined) ?? undefined;
+  // Menu code lives in the query string (?type=<code>) because `output: "export"`
+  // forbids runtime-discovered dynamic route params. The legacy `?type=drinks`
+  // value is honored as an alias for any 'drinks'- or 'takeaway'-coded menu.
+  const typeParam = searchParams.get("type") ?? undefined;
   const aiChatDevOverride = process.env.NODE_ENV !== 'production' && searchParams.get('aiChat') === '1';
   const hasChatWorker = Boolean(process.env.NEXT_PUBLIC_CHAT_WORKER_URL);
   const { data, isLoading, error, loadRestaurant } = useRestaurantStore();
@@ -86,31 +88,24 @@ export default function MenuPageClient() {
     sessionStorage.setItem('promo_seen', '1');
   };
 
-  // Resolve the current menu from the route param. Falls back to the first published menu
-  // when the user lands on /menu without a code (handled below by a redirect).
+  // Resolve the current menu from `?type=<code>`. Falls back to the first published menu
+  // when no `type` is in the query string. The legacy value `drinks` aliases to any menu
+  // coded `drinks` (or `takeaway` for old QR codes from before the rename).
   const publishedMenus = useMemo(
     () => (data?.menus ?? []).filter((m) => m.published),
     [data?.menus],
   );
   const currentMenu = useMemo(() => {
     if (!data) return undefined;
-    if (menuCodeParam) {
-      return data.menus.find((m) => m.code === menuCodeParam);
-    }
-    // Legacy /menu?type=drinks shim: pick a 'drinks' or 'takeaway'-coded menu if present.
-    const legacyType = searchParams.get("type");
-    if (legacyType === "drinks") {
-      return publishedMenus.find((m) => m.code === "drinks") || publishedMenus.find((m) => m.code === "takeaway");
+    if (typeParam) {
+      const direct = data.menus.find((m) => m.code === typeParam);
+      if (direct) return direct;
+      if (typeParam === "drinks") {
+        return publishedMenus.find((m) => m.code === "takeaway");
+      }
     }
     return publishedMenus[0];
-  }, [data, menuCodeParam, publishedMenus, searchParams]);
-
-  // If we're on /menu (no code) and the data is loaded, redirect to the resolved menu's URL.
-  useEffect(() => {
-    if (!data || menuCodeParam) return;
-    if (!currentMenu) return;
-    router.replace(`/${locale}/menu/${currentMenu.code}`);
-  }, [data, menuCodeParam, currentMenu, locale, router]);
+  }, [data, typeParam, publishedMenus]);
 
   const isVisible = (entry: MenuEntry) => {
     if (!currentMenu) return false;

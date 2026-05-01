@@ -6,12 +6,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 const loadRestaurantMock = vi.fn();
 const chatPanelMock = vi.fn(() => <div data-testid="chat-panel" />);
 
-const routerReplaceMock = vi.fn();
-
 vi.mock('next/navigation', () => ({
-  useParams: () => ({ locale: 'it', code: 'food' }),
+  useParams: () => ({ locale: 'it' }),
   useSearchParams: () => new URLSearchParams(''),
-  useRouter: () => ({ replace: routerReplaceMock, push: vi.fn(), prefetch: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock('@/lib/i18n', () => ({
