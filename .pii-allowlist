@@ -1,0 +1,32 @@
+# Narrow allowlist for git-shield false positives in this repo.
+# One regex per line. See https://github.com/vekexasia/git-shield#allowlist
+
+# ── Drizzle snapshot identifiers ──
+# drizzle generates a fresh UUID for each migration snapshot's `id`/`prevId`.
+# These appear in backend/drizzle/meta/*_snapshot.json and are not secrets.
+^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+
+# ── Italian food / menu vocabulary in test fixtures + demo seed ──
+# Dish, course, and translation names that the PII scanner mistakes for personal names.
+(?i)^pizza\s+margherita$
+(?i)^margherita$
+(?i)^tiramis[uù]$
+(?i)^cucina$
+(?i)^antipasti$
+(?i)^primi$
+(?i)^secondi$
+(?i)^dolci$
+(?i)^bevande$
+(?i)^vorspeisen$
+(?i)^entr[ée]es$
+(?i)^speisekarte$
+(?i)^bruschetta$
+(?i)^carpaccio$
+(?i)^burrata$
+(?i)^ravioli$
+(?i)^spaghetti$
+(?i)^branzino$
+(?i)^tagliata$
+(?i)^prosecco$
+(?i)^merlot$
+(?i)^carbonara$
