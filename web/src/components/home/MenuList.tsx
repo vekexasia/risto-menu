@@ -2,16 +2,16 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
-import type { MenuCategory, MenuEntry, RestaurantData, MenuSelection } from '@/lib/types';
-import { isMenuEntryVisible } from '@/lib/types';
+import type { MenuCategory, MenuEntry, RestaurantData } from '@/lib/types';
+import { isMenuEntryVisibleOnMenu } from '@/lib/types';
 import { CategoryHeader } from './CategoryHeader';
 import { MenuItem } from './MenuItem';
 
 interface MenuListProps {
   /** Restaurant data containing categories and caches */
   restaurant: RestaurantData;
-  /** Currently selected menu type (SEATED or TAKEAWAY) */
-  menuSelection: MenuSelection;
+  /** ID of the currently displayed menu (filters entries by membership). */
+  menuId: string;
   /** Callback when visible category changes */
   onVisibleCategoryChange: (categoryId: string) => void;
   /** Optional search filter to show only matching items */
@@ -35,7 +35,7 @@ interface MenuListProps {
  */
 export function MenuList({
   restaurant,
-  menuSelection,
+  menuId,
   onVisibleCategoryChange,
   searchFilter,
   locale,
@@ -48,7 +48,7 @@ export function MenuList({
   // Get visible categories (non-empty ones)
   const visibleCategories = getVisibleCategories(
     restaurant.categories,
-    menuSelection,
+    menuId,
     searchFilter
   );
 
@@ -121,7 +121,7 @@ export function MenuList({
           key={category.id}
           category={category}
           restaurant={restaurant}
-          menuSelection={menuSelection}
+          menuId={menuId}
           locale={locale}
           searchFilter={searchFilter}
           setCategoryRef={setCategoryRef}
@@ -138,7 +138,7 @@ export function MenuList({
 interface CategorySectionProps {
   category: MenuCategory;
   restaurant: RestaurantData;
-  menuSelection: MenuSelection;
+  menuId: string;
   locale?: string;
   searchFilter?: string;
   setCategoryRef: (categoryId: string) => (element: HTMLElement | null) => void;
@@ -148,7 +148,7 @@ interface CategorySectionProps {
 function CategorySection({
   category,
   restaurant,
-  menuSelection,
+  menuId,
   locale,
   searchFilter,
   setCategoryRef,
@@ -167,7 +167,7 @@ function CategorySection({
   // Filter entries for this category
   const visibleEntries = getVisibleEntries(
     category.entries,
-    menuSelection,
+    menuId,
     searchFilter
   );
 
@@ -208,13 +208,13 @@ function CategorySection({
  */
 function getVisibleCategories(
   categories: MenuCategory[],
-  menuSelection: MenuSelection,
+  menuId: string,
   searchFilter?: string
 ): MenuCategory[] {
   return categories.filter((category) => {
     const visibleEntries = getVisibleEntries(
       category.entries,
-      menuSelection,
+      menuId,
       searchFilter
     );
     return visibleEntries.length > 0;
@@ -226,12 +226,12 @@ function getVisibleCategories(
  */
 function getVisibleEntries(
   entries: MenuEntry[],
-  menuSelection: MenuSelection,
+  menuId: string,
   searchFilter?: string
 ): MenuEntry[] {
   return entries.filter((entry) => {
     // Check menu visibility
-    if (!isMenuEntryVisible(entry, menuSelection)) {
+    if (!isMenuEntryVisibleOnMenu(entry, menuId)) {
       return false;
     }
 

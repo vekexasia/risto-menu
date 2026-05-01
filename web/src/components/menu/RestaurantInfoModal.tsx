@@ -247,12 +247,12 @@ export function RestaurantInfoModal({ restaurant, isOpen, onClose }: RestaurantI
               )}
 
               {/* ORARI DI APERTURA */}
-              {restaurant.openingSchedule?.seated && (
+              {restaurant.openingSchedule && (
                 <Section title={t('openingHours')}>
                   <div className="space-y-1">
                     {DAYS.map((day, index) => {
                       const isToday = index === todayIndex;
-                      const slots = restaurant.openingSchedule?.seated?.schedule?.[index];
+                      const slots = restaurant.openingSchedule?.schedule?.[index];
                       return (
                         <div
                           key={day}

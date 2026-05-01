@@ -48,12 +48,11 @@ export default function HomePage() {
 
   // Get current opening hours
   const getOpeningHours = () => {
-    if (!data?.openingSchedule?.seated?.schedule) return null;
-    const workingHours = data.openingSchedule.seated;
+    if (!data?.openingSchedule?.schedule) return null;
     const today = new Date().getDay();
     // Convert JS day (0=Sunday) to schedule index (0=Monday)
     const dayIndex = today === 0 ? 6 : today - 1;
-    const todaySchedule = workingHours.schedule[dayIndex];
+    const todaySchedule = data.openingSchedule.schedule[dayIndex];
     if (!todaySchedule || todaySchedule.length === 0) return null;
     return todaySchedule.map((slot) => `${slot.start} - ${slot.end}`).join("  ");
   };
@@ -85,18 +84,7 @@ export default function HomePage() {
   if (!data) return null;
 
   const openingHours = getOpeningHours();
-  const seatedMenuTitle = getContentDisplayText({
-    entity: data.menus?.seated || { title: "MENU" },
-    field: "title",
-    locale,
-    restaurantId: data.id,
-  });
-  const takeawayMenuTitle = getContentDisplayText({
-    entity: data.menus?.takeaway || { title: t("wineAndBeers") },
-    field: "title",
-    locale,
-    restaurantId: data.id,
-  });
+  const publishedMenus = (data.menus ?? []).filter((m) => m.published);
 
   return (
     <main className="min-h-screen bg-gray-100 pb-24">
@@ -171,69 +159,48 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Menu selection cards */}
+      {/* Menu selection cards — one per published menu, drag-orderable in admin. */}
       <div className="px-4 py-8">
-        <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
-          {/* Menu card */}
-          <Link
-            href={`/${locale}/menu`}
-            data-locale-anchor="home:menu-seated"
-            className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center aspect-square hover:shadow-xl transition-shadow"
+        {publishedMenus.length === 0 ? (
+          <p className="text-center text-gray-500 text-sm">No menus available</p>
+        ) : (
+          <div
+            className={`grid gap-4 max-w-2xl mx-auto ${
+              publishedMenus.length === 1 ? "grid-cols-1" : "grid-cols-2"
+            }`}
           >
-            <div className="w-32 h-32 mb-4 relative">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                {/* Plate */}
-                <ellipse cx="50" cy="55" rx="35" ry="25" fill="#d4a574" />
-                <ellipse cx="50" cy="50" rx="30" ry="20" fill="#e8c9a8" />
-                {/* Fork */}
-                <rect x="20" y="20" width="3" height="40" fill="#888" rx="1" />
-                <rect x="17" y="15" width="2" height="8" fill="#888" rx="1" />
-                <rect x="20" y="15" width="2" height="8" fill="#888" rx="1" />
-                <rect x="23" y="15" width="2" height="8" fill="#888" rx="1" />
-                {/* Knife */}
-                <rect x="75" y="20" width="4" height="40" fill="#888" rx="1" />
-                <path d="M75 15 L79 15 L79 25 L75 25 Z" fill="#888" />
-              </svg>
-            </div>
-            <span className="text-lg font-semibold text-gray-800 uppercase tracking-wide">
-              <span className="block">{seatedMenuTitle.primary}</span>
-              {seatedMenuTitle.secondary && (
-                <span className="mt-0.5 block text-xs font-medium normal-case text-gray-500">
-                  {seatedMenuTitle.secondary}
-                </span>
-              )}
-            </span>
-          </Link>
-
-          {/* Wine & Beers card */}
-          <Link
-            href={`/${locale}/menu?type=drinks`}
-            data-locale-anchor="home:menu-drinks"
-            className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center aspect-square hover:shadow-xl transition-shadow"
-          >
-            <div className="w-32 h-32 mb-4 relative">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                {/* Wine bottle */}
-                <rect x="30" y="30" width="15" height="50" fill="#1a1a1a" rx="2" />
-                <rect x="33" y="20" width="9" height="12" fill="#1a1a1a" rx="1" />
-                <rect x="32" y="35" width="11" height="15" fill="#d4a574" rx="1" />
-                {/* Wine glass */}
-                <path d="M60 70 L60 85 L55 85 L55 70" fill="#888" />
-                <ellipse cx="60" cy="85" rx="8" ry="3" fill="#888" />
-                <path d="M50 40 Q50 55 55 65 L65 65 Q70 55 70 40 Z" fill="none" stroke="#888" strokeWidth="2" />
-                <ellipse cx="60" cy="40" rx="10" ry="4" fill="none" stroke="#888" strokeWidth="2" />
-              </svg>
-            </div>
-            <span className="text-lg font-semibold text-gray-800 uppercase tracking-wide">
-              <span className="block">{takeawayMenuTitle.primary}</span>
-              {takeawayMenuTitle.secondary && (
-                <span className="mt-0.5 block text-xs font-medium normal-case text-gray-500">
-                  {takeawayMenuTitle.secondary}
-                </span>
-              )}
-            </span>
-          </Link>
-        </div>
+            {publishedMenus.map((menu) => {
+              const title = getContentDisplayText({
+                entity: menu,
+                field: "title",
+                locale,
+                restaurantId: data.id,
+              });
+              return (
+                <Link
+                  key={menu.id}
+                  href={`/${locale}/menu/${menu.code}`}
+                  data-locale-anchor={`home:menu-${menu.code}`}
+                  className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center aspect-square hover:shadow-xl transition-shadow"
+                >
+                  <div className="w-24 h-24 mb-4 flex items-center justify-center text-primary/70">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-full h-full">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                  </div>
+                  <span className="text-lg font-semibold text-gray-800 uppercase tracking-wide text-center">
+                    <span className="block">{title.primary}</span>
+                    {title.secondary && (
+                      <span className="mt-0.5 block text-xs font-medium normal-case text-gray-500">
+                        {title.secondary}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Restaurant Info Modal */}

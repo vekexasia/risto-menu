@@ -6,9 +6,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 const loadRestaurantMock = vi.fn();
 const chatPanelMock = vi.fn(() => <div data-testid="chat-panel" />);
 
+const routerReplaceMock = vi.fn();
+
 vi.mock('next/navigation', () => ({
-  useParams: () => ({ locale: 'it', restaurantSlug: 'test-resto' }),
+  useParams: () => ({ locale: 'it', code: 'food' }),
   useSearchParams: () => new URLSearchParams(''),
+  useRouter: () => ({ replace: routerReplaceMock, push: vi.fn(), prefetch: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock('@/lib/i18n', () => ({
@@ -63,6 +66,9 @@ const menuData = {
   id: 'demo-restaurant',
   name: 'Trattoria Demo',
   features: { aiChat: true },
+  menus: [
+    { id: 'menu-food', code: 'food', title: 'Food', published: true, sortOrder: 0 },
+  ],
   categories: [
     {
       id: 'cat-antipasti',
@@ -76,7 +82,8 @@ const menuData = {
           price: 7.5,
           order: 0,
           allergens: [],
-          menuVisibility: ['all'],
+          menuIds: ['menu-food'],
+          hidden: false,
         },
       ],
     },

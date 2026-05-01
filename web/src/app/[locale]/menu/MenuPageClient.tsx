@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useTranslations } from "@/lib/i18n";
 import Image from "next/image";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { MenuItemDetail } from "@/components/menu/MenuItemDetail";
 import { RestaurantInfoModal } from "@/components/menu/RestaurantInfoModal";
@@ -26,9 +26,10 @@ type MenuEntryWithDetails = MenuEntry & { description?: string; image?: string; 
 export default function MenuPageClient() {
   const t = useTranslations();
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const locale = params.locale as string;
-  const menuType = searchParams.get("type");
+  const menuCodeParam = (params.code as string | undefined) ?? undefined;
   const aiChatDevOverride = process.env.NODE_ENV !== 'production' && searchParams.get('aiChat') === '1';
   const hasChatWorker = Boolean(process.env.NEXT_PUBLIC_CHAT_WORKER_URL);
   const { data, isLoading, error, loadRestaurant } = useRestaurantStore();
@@ -85,15 +86,36 @@ export default function MenuPageClient() {
     sessionStorage.setItem('promo_seen', '1');
   };
 
-  const isVisible = (entry: { menuVisibility?: Record<string, boolean> | string[] }) => {
-    const visibility = entry.menuVisibility;
-    if (!visibility) return true;
-    if (Array.isArray(visibility)) {
-      if (menuType === "drinks") return visibility.includes("all") || visibility.includes("takeaway");
-      return visibility.includes("all") || visibility.includes("seated");
+  // Resolve the current menu from the route param. Falls back to the first published menu
+  // when the user lands on /menu without a code (handled below by a redirect).
+  const publishedMenus = useMemo(
+    () => (data?.menus ?? []).filter((m) => m.published),
+    [data?.menus],
+  );
+  const currentMenu = useMemo(() => {
+    if (!data) return undefined;
+    if (menuCodeParam) {
+      return data.menus.find((m) => m.code === menuCodeParam);
     }
-    if (menuType === "drinks") return (visibility as Record<string, boolean>).TAKEAWAY !== false;
-    return (visibility as Record<string, boolean>).SEATED !== false;
+    // Legacy /menu?type=drinks shim: pick a 'drinks' or 'takeaway'-coded menu if present.
+    const legacyType = searchParams.get("type");
+    if (legacyType === "drinks") {
+      return publishedMenus.find((m) => m.code === "drinks") || publishedMenus.find((m) => m.code === "takeaway");
+    }
+    return publishedMenus[0];
+  }, [data, menuCodeParam, publishedMenus, searchParams]);
+
+  // If we're on /menu (no code) and the data is loaded, redirect to the resolved menu's URL.
+  useEffect(() => {
+    if (!data || menuCodeParam) return;
+    if (!currentMenu) return;
+    router.replace(`/${locale}/menu/${currentMenu.code}`);
+  }, [data, menuCodeParam, currentMenu, locale, router]);
+
+  const isVisible = (entry: MenuEntry) => {
+    if (!currentMenu) return false;
+    if (entry.hidden) return false;
+    return entry.menuIds.includes(currentMenu.id);
   };
 
   const noticeConfig = data?.info?.menuNotice;
@@ -102,6 +124,7 @@ export default function MenuPageClient() {
   const noticeText = noticeConfig?.i18n?.[locale]?.text || noticeConfig?.text || defaultNoticeText;
 
   const filteredCategories = useMemo(() => {
+    if (!currentMenu) return [];
     return categories
       .map((cat) => ({
         ...cat,
@@ -121,7 +144,7 @@ export default function MenuPageClient() {
         }),
       }))
       .filter((cat) => cat.entries.length > 0);
-  }, [categories, menuType, searchQuery, chatFilterCriteria, locale, data?.id]);
+  }, [categories, currentMenu, searchQuery, chatFilterCriteria, locale, data?.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !data) return;
@@ -219,10 +242,10 @@ export default function MenuPageClient() {
   if (!data) return null;
 
   const getTodayHours = () => {
-    if (!data.openingSchedule?.seated?.schedule) return t("closedToday");
+    if (!data.openingSchedule?.schedule) return t("closedToday");
     const today = new Date().getDay();
     const dayIndex = today === 0 ? 6 : today - 1;
-    const todaySchedule = data.openingSchedule.seated.schedule[dayIndex];
+    const todaySchedule = data.openingSchedule.schedule[dayIndex];
     if (!todaySchedule || todaySchedule.length === 0) return t("closedToday");
     return todaySchedule.map((slot) => `${slot.start} - ${slot.end}`).join("   ");
   };
@@ -261,10 +284,13 @@ export default function MenuPageClient() {
       </div>
 
       {(() => {
-        const menuTitle = getDisplayText(
-          menuType === "drinks" ? (data.menus?.takeaway || { name: t("wineAndBeers") }) : (data.menus?.seated || { name: "MENU" }),
-          "name"
-        );
+        if (!currentMenu) return null;
+        const menuTitle = getContentDisplayText({
+          entity: currentMenu,
+          field: "title",
+          locale,
+          restaurantId: data.id,
+        });
         return (
           <h2 className="text-center text-primary font-bold text-xl mt-6 mb-4 tracking-wider">
             <span className="block">{menuTitle.primary}</span>
