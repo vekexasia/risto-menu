@@ -432,8 +432,8 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
 
         <div style={{ maxWidth: section ? 720 : 1200 }}>
 
-          {/* ── 2-column grid (single column when a sub-section is selected) ── */}
-          <div style={{ display: section ? "block" : "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+          {/* ── 2-column grid (single column when a sub-section is selected, or on narrow viewports) ── */}
+          <div className={section ? undefined : "adm-settings-grid"} style={section ? { display: "block" } : { display: "grid", gap: 16, alignItems: "start" }}>
 
             {/* ── LEFT column ── */}
             <div>

@@ -37,6 +37,16 @@
   }
 }
 
+/* Settings overview grid: 2 columns on wide viewports, 1 column when narrow. */
+.adm-settings-grid {
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 900px) {
+  .adm-settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Table rows hover */
 .adm-row:hover { background: #F4F2EE !important; }
 
