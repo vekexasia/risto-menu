@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { updateRestaurantSettings, setMenuPublished, fetchRestaurantSettings } from "@/lib/api";
 import { uploadHeaderImage, uploadPromotionalImage, uploadLocaleFlag } from "@/lib/imageUpload";
@@ -392,6 +393,31 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
           </h1>
         </div>
 
+        {/* Mobile section chips — sidebar is hidden on narrow viewports */}
+        <nav className="adm-settings-chips" style={{ display: "none", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+          {(["profile", "languages", "communications", "chat-ai", "publishing"] as const).map((s) => {
+            const active = section === s;
+            return (
+              <Link
+                key={s}
+                href={`/admin?s=settings-${s}`}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: "6px 12px",
+                  borderRadius: 14,
+                  border: `1px solid ${active ? T.dark : T.border}`,
+                  background: active ? T.dark : "#fff",
+                  color: active ? "#fff" : T.text,
+                  textDecoration: "none",
+                }}
+              >
+                {SECTION_TITLES[s]}
+              </Link>
+            );
+          })}
+        </nav>
+
         {/* Toast messages */}
         {success && (
           <div style={{ background: T.okBg, border: `1px solid #BBF7D0`, borderRadius: 6, padding: "10px 14px", color: T.ok, fontSize: 13, marginBottom: 16 }}>
@@ -628,7 +654,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                     setDisabledLocales((prev) => s === "off" ? [...prev.filter((l) => l !== locale), locale] : prev.filter((l) => l !== locale));
                   };
                   return (
-                    <div key={locale} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+                    <div key={locale} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Flag code={locale} label={LABEL[locale]} />
                         <span style={{ fontSize: 11, fontWeight: 700, color: T.off, background: T.offBg, borderRadius: 4, padding: "1px 5px" }}>{CODE[locale]}</span>

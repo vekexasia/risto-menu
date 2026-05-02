@@ -30,6 +30,13 @@
   }
 }
 
+/* Settings section chips: shown only when the sidebar is hidden (mobile). */
+@media (max-width: 900px) {
+  .adm-settings-chips {
+    display: flex !important;
+  }
+}
+
 /* Table rows hover */
 .adm-row:hover { background: #F4F2EE !important; }
 

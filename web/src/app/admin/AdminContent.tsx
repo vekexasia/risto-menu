@@ -158,7 +158,7 @@ export default function AdminContent({
   const topNavItems: { href: string; label: string; matchPrefix?: string }[] = [
     { href: s("categories"), label: t("layout.nav.menu") },
     { href: s("analytics"), label: t("layout.nav.analytics") },
-    { href: s("settings-profile"), label: t("layout.nav.settings"), matchPrefix: "settings" },
+    { href: s("settings"), label: t("layout.nav.settings"), matchPrefix: "settings" },
   ];
 
   const firstCategoryId = categories[0]?.id;
