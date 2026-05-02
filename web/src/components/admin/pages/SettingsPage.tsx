@@ -620,8 +620,8 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                 {/* Standard locales */}
                 <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{t("settings.languages.standard")}</p>
                 {STANDARD_NON_PRIMARY.map((locale: string) => {
-                  const LABEL: Record<string, string> = { en: "English", de: "Deutsch", fr: "Français", es: "Español", nl: "Nederlands", ru: "Русский", pt: "Português" };
-                  const CODE: Record<string, string> = { en: "EN", de: "DE", fr: "FR", es: "ES", nl: "NL", ru: "RU", pt: "PT" };
+                  const LABEL: Record<string, string> = { it: "Italiano", en: "English", de: "Deutsch", fr: "Français", es: "Español", nl: "Nederlands", ru: "Русский", pt: "Português" };
+                  const CODE: Record<string, string> = { it: "IT", en: "EN", de: "DE", fr: "FR", es: "ES", nl: "NL", ru: "RU", pt: "PT" };
                   const state: "off" | "hidden" | "live" = disabledLocales.includes(locale) ? "off" : enabledLocales.includes(locale) ? "live" : "hidden";
                   const setState = (s: "off" | "hidden" | "live") => {
                     setEnabledLocales((prev) => s === "live" ? [...prev.filter((l) => l !== locale), locale] : prev.filter((l) => l !== locale));

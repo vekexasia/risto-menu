@@ -385,7 +385,7 @@
     "settings.promo.expiryField": "Expiry date",
     "settings.promo.expiryHint": "The promotion will no longer be visible after this date",
     "settings.promo.imageLabel": "Promotional image",
-    "settings.languages.intro": "Italian is always on. Enable the standard languages or add custom ones (e.g. regional dialects).",
+    "settings.languages.intro": "De primaire taal van het menu staat altijd aan. Schakel de andere standaardtalen in of voeg aangepaste talen toe (bijv. regionale dialecten).",
     "settings.languages.primaryLabel": "Primaire taal van het menu",
     "settings.languages.primaryDesc": "De taal waarin je gerechtnamen en beschrijvingen invoert. Andere talen vertalen vanuit deze.",
     "settings.languages.standard": "Standard",

@@ -385,7 +385,7 @@
     "settings.promo.expiryField": "Expiry date",
     "settings.promo.expiryHint": "The promotion will no longer be visible after this date",
     "settings.promo.imageLabel": "Promotional image",
-    "settings.languages.intro": "Italian is always on. Enable the standard languages or add custom ones (e.g. regional dialects).",
+    "settings.languages.intro": "El idioma principal del menú siempre está activo. Habilita los demás idiomas estándar o añade idiomas personalizados (p. ej. dialectos regionales).",
     "settings.languages.primaryLabel": "Idioma principal del menú",
     "settings.languages.primaryDesc": "El idioma en el que escribes los nombres y descripciones de los platos. Los demás idiomas se traducen desde este.",
     "settings.languages.standard": "Standard",
