@@ -68,11 +68,11 @@ const menus = [
 ];
 
 const categories = [
-  { id: 'demo-cat-starters', name: 'Starters', sortOrder: 0, i18n: { it: { name: 'Antipasti' }, de: { name: 'Vorspeisen' }, fr: { name: 'Entrées' } } },
-  { id: 'demo-cat-pasta', name: 'Pasta', sortOrder: 1, i18n: { it: { name: 'Primi' }, de: { name: 'Pasta' }, fr: { name: 'Pâtes' } } },
-  { id: 'demo-cat-mains', name: 'Main courses', sortOrder: 2, i18n: { it: { name: 'Secondi' }, de: { name: 'Hauptgerichte' }, fr: { name: 'Plats principaux' }, vec: { name: 'Secondi' } } },
-  { id: 'demo-cat-desserts', name: 'Desserts', sortOrder: 3, i18n: { it: { name: 'Dolci' }, de: { name: 'Desserts' }, fr: { name: 'Desserts' } } },
-  { id: 'demo-cat-wines', name: 'Wine by the glass', sortOrder: 4, i18n: { it: { name: 'Vini al calice' }, de: { name: 'Wein im Glas' }, fr: { name: 'Vins au verre' } } },
+  { id: 'demo-cat-starters', name: 'Starters', sortOrder: 0, i18n: { it: { name: 'Antipasti' }, en: { name: 'Starters' }, de: { name: 'Vorspeisen' }, fr: { name: 'Entrées' } } },
+  { id: 'demo-cat-pasta', name: 'Pasta', sortOrder: 1, i18n: { it: { name: 'Primi' }, en: { name: 'Pasta' }, de: { name: 'Pasta' }, fr: { name: 'Pâtes' } } },
+  { id: 'demo-cat-mains', name: 'Main courses', sortOrder: 2, i18n: { it: { name: 'Secondi' }, en: { name: 'Main courses' }, de: { name: 'Hauptgerichte' }, fr: { name: 'Plats principaux' }, vec: { name: 'Secondi' } } },
+  { id: 'demo-cat-desserts', name: 'Desserts', sortOrder: 3, i18n: { it: { name: 'Dolci' }, en: { name: 'Desserts' }, de: { name: 'Desserts' }, fr: { name: 'Desserts' } } },
+  { id: 'demo-cat-wines', name: 'Wine by the glass', sortOrder: 4, i18n: { it: { name: 'Vini al calice' }, en: { name: 'Wine by the glass' }, de: { name: 'Wein im Glas' }, fr: { name: 'Vins au verre' } } },
 ];
 
 // Categories that belong to the drinks menu (membership is many-to-many on entries; we map by category here for clarity).
@@ -90,6 +90,7 @@ const entries = [
     allergens: ['Glutine'],
     i18n: {
       it: { name: 'Bruschetta al pomodoro', desc: 'Pane tostato, pomodorini, basilico e olio extravergine.' },
+      en: { name: 'Tomato bruschetta', desc: 'Toasted bread, cherry tomatoes, basil and extra virgin olive oil.' },
       de: { name: 'Tomaten-Bruschetta', desc: 'Geröstetes Brot, Kirschtomaten, Basilikum und natives Olivenöl extra.' },
       fr: { name: 'Bruschetta à la tomate', desc: 'Pain grillé, tomates cerises, basilic et huile d’olive extra vierge.' },
       vec: { name: 'Bruscheta al pomodoro', desc: 'Pan brustolà, pomodorini, basìlego e ojo bon.' },
@@ -106,6 +107,7 @@ const entries = [
     allergens: ['Frutta-a-Guscio'],
     i18n: {
       it: { name: 'Carpaccio di zucchine', desc: 'Zucchine marinate, limone, menta e scaglie di mandorla.' },
+      en: { name: 'Zucchini carpaccio', desc: 'Marinated zucchini, lemon, mint and almond flakes.' },
       de: { name: 'Zucchini-Carpaccio', desc: 'Marinierte Zucchini, Zitrone, Minze und Mandelblättchen.' },
       fr: { name: 'Carpaccio de courgettes', desc: 'Courgettes marinées, citron, menthe et copeaux d’amande.' },
       vec: { name: 'Carpacio de suchine', desc: 'Suchine marinàe, limon, menta e mandorle a scaie.' },
@@ -122,6 +124,7 @@ const entries = [
     allergens: ['Molluschi'],
     i18n: {
       it: { name: 'Polpo alla griglia', desc: 'Polpo croccante con crema di patate, prezzemolo e olio al limone.' },
+      en: { name: 'Grilled octopus', desc: 'Crispy octopus with potato cream, parsley and lemon oil.' },
       de: { name: 'Gegrillter Oktopus', desc: 'Knuspriger Oktopus mit Kartoffelcreme, Petersilie und Zitronenöl.' },
       fr: { name: 'Poulpe grillé', desc: 'Poulpe croustillant avec crème de pommes de terre, persil et huile au citron.' },
       vec: { name: 'Folpo ai ferri', desc: 'Folpo crocante co crema de patate, persemolo e ojo al limon.' },
@@ -138,6 +141,7 @@ const entries = [
     allergens: ['Latte-e-Derivati', 'Glutine', 'Frutta-a-Guscio'],
     i18n: {
       it: { name: 'Burrata, datterini e pesto', desc: 'Burrata pugliese con pomodorini dolci, pesto leggero e focaccia croccante.' },
+      en: { name: 'Burrata, cherry tomatoes and pesto', desc: 'Apulian burrata with sweet cherry tomatoes, light pesto and crisp focaccia.' },
       de: { name: 'Burrata, Datteltomaten und Pesto', desc: 'Burrata aus Apulien mit süßen Kirschtomaten, leichtem Pesto und knuspriger Focaccia.' },
       fr: { name: 'Burrata, tomates cerises et pesto', desc: 'Burrata des Pouilles avec tomates cerises douces, pesto léger et focaccia croustillante.' },
       vec: { name: 'Burrata, datterini e pesto', desc: 'Burrata pugliese co pomodorini dolsi, pesto liziero e focaccia crocante.' },
@@ -154,6 +158,7 @@ const entries = [
     allergens: ['Glutine', 'Uova', 'Latte-e-Derivati'],
     i18n: {
       it: { name: 'Ravioli ricotta e spinaci', desc: 'Ravioli fatti in casa con burro e salvia.' },
+      en: { name: 'Ricotta and spinach ravioli', desc: 'Homemade ravioli with butter and sage.' },
       de: { name: 'Ravioli mit Ricotta und Spinat', desc: 'Hausgemachte Ravioli mit Butter und Salbei.' },
       fr: { name: 'Ravioli ricotta-épinards', desc: 'Ravioli maison au beurre et à la sauge.' },
       vec: { name: 'Ravioli ricota e spinasi', desc: 'Ravioli fati in casa co buro e salvia.' },
@@ -170,6 +175,7 @@ const entries = [
     allergens: ['Glutine', 'Molluschi', 'Anidride-Solforosa-e-Solfiti'],
     i18n: {
       it: { name: 'Spaghetti alle vongole', desc: 'Spaghetti con vongole, aglio, prezzemolo e vino bianco.' },
+      en: { name: 'Spaghetti with clams', desc: 'Spaghetti with clams, garlic, parsley and white wine.' },
       de: { name: 'Spaghetti mit Venusmuscheln', desc: 'Spaghetti mit Muscheln, Knoblauch, Petersilie und Weißwein.' },
       fr: { name: 'Spaghetti aux palourdes', desc: 'Spaghetti aux palourdes, ail, persil et vin blanc.' },
       vec: { name: 'Spaghetti co le vongole', desc: 'Spaghetti co vongole, ajo, persemolo e vin bianco.' },
@@ -186,6 +192,7 @@ const entries = [
     allergens: ['Pesce'],
     i18n: {
       it: { name: 'Filetto di branzino', desc: 'Branzino al forno con verdure di stagione, limone e timo.' },
+      en: { name: 'Sea bass fillet', desc: 'Baked sea bass with seasonal vegetables, lemon and thyme.' },
       de: { name: 'Wolfsbarschfilet', desc: 'Gebackener Wolfsbarsch mit Saisongemüse, Zitrone und Thymian.' },
       fr: { name: 'Filet de bar', desc: 'Bar au four avec légumes de saison, citron et thym.' },
       vec: { name: 'Fileto de branzin', desc: 'Branzin al forno co verdure de stagion, limon e timo.' },
@@ -202,6 +209,7 @@ const entries = [
     allergens: ['Latte-e-Derivati'],
     i18n: {
       it: { name: 'Tagliata di manzo', desc: 'Manzo scottato, rucola, scaglie di grana e riduzione al balsamico.' },
+      en: { name: 'Sliced beef tagliata', desc: 'Seared beef with arugula, parmesan flakes and balsamic reduction.' },
       de: { name: 'Rindertagliata', desc: 'Kurz gebratenes Rindfleisch mit Rucola, Parmesan und Balsamico-Reduktion.' },
       fr: { name: 'Tagliata de bœuf', desc: 'Bœuf saisi, roquette, copeaux de parmesan et réduction balsamique.' },
       vec: { name: 'Taiata de manzo', desc: 'Manzo scotà, rucola, scaie de grana e ridusion al balsamico.' },
@@ -218,6 +226,7 @@ const entries = [
     allergens: ['Uova', 'Latte-e-Derivati', 'Glutine'],
     i18n: {
       it: { name: 'Tiramisù della casa', desc: 'Mascarpone, caffè e cacao.' },
+      en: { name: 'House tiramisu', desc: 'Mascarpone, coffee and cocoa.' },
       de: { name: 'Hausgemachtes Tiramisù', desc: 'Mascarpone, Kaffee und Kakao.' },
       fr: { name: 'Tiramisu maison', desc: 'Mascarpone, café et cacao.' },
       vec: { name: 'Tiramisù de casa', desc: 'Mascarpone, cafè e cacao.' },
@@ -234,6 +243,7 @@ const entries = [
     allergens: ['Anidride-Solforosa-e-Solfiti'],
     i18n: {
       it: { name: 'Prosecco Brut', desc: 'Calice di prosecco fresco e floreale.' },
+      en: { name: 'Prosecco Brut', desc: 'A fresh and floral glass of prosecco.' },
       de: { name: 'Prosecco Brut', desc: 'Ein frisches, blumiges Glas Prosecco.' },
       fr: { name: 'Prosecco Brut', desc: 'Un verre de prosecco frais et floral.' },
       vec: { name: 'Prosecco Brut', desc: 'Un calice de prosecco fresco e fiorìo.' },
