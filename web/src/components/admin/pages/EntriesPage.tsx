@@ -9,6 +9,7 @@ import { ApiError, updateEntry, createEntry, reorderEntries, deleteEntry, moveEn
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { SortableList, DragHandle } from "@/components/admin/SortableList";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
+import { MenuItemCardPreview, MenuItemExpandedPreview } from "@/components/admin/MenuItemPreview";
 import { useTranslations } from "@/lib/i18n";
 
 const STANDARD_TRANSLATION_LOCALES = ["it", "en", "de", "fr", "es", "nl", "ru", "pt"];
@@ -1034,10 +1035,13 @@ export default function EntriesPage() {
         </div>
       )}
 
-      {/* Edit/Add Modal */}
+      {/* Edit/Add Split Overlay */}
       {editingEntry && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center md:p-4" onClick={closeEditModal}>
+          <div className="bg-white w-full md:w-[min(95vw,1100px)] rounded-t-3xl md:rounded-2xl max-h-[95vh] md:max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
+          {/* Form pane */}
+          <div className="flex flex-col flex-1 md:basis-3/5 md:max-w-[60%] overflow-hidden">
+          <div className="flex flex-col flex-1 overflow-y-auto">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center z-10">
               <h3 className="font-bold text-lg">{isNewEntry ? t("entries.modal.newTitle") : t("entries.modal.editTitle")}</h3>
@@ -1439,6 +1443,43 @@ export default function EntriesPage() {
                 </button>
               </div>
             </div>
+          </div>
+          </div>
+          {/* Preview pane (desktop only) */}
+          <div className="hidden md:flex md:basis-2/5 md:max-w-[40%] flex-col bg-gray-50 border-l overflow-y-auto p-6 gap-3">
+            <h4 className="text-[10.5px] font-bold uppercase tracking-wide text-gray-500">
+              {t("entries.preview.cardTitle")}
+            </h4>
+            <div className="rounded-lg overflow-hidden border border-gray-200">
+              <MenuItemCardPreview
+                item={{
+                  name: editingEntry.name,
+                  description: editingEntry.desc,
+                  price: editingEntry.price,
+                  priceUnit: editingEntry.priceUnit,
+                  image: editingEntry.image,
+                  allergens: editingEntry.allergens,
+                  outOfStock: editingEntry.outOfStock,
+                  frozen: editingEntry.frozen,
+                }}
+              />
+            </div>
+            <h4 className="text-[10.5px] font-bold uppercase tracking-wide text-gray-500 mt-3">
+              {t("entries.preview.expandedTitle")}
+            </h4>
+            <MenuItemExpandedPreview
+              item={{
+                name: editingEntry.name,
+                description: editingEntry.desc,
+                price: editingEntry.price,
+                priceUnit: editingEntry.priceUnit,
+                image: editingEntry.image,
+                allergens: editingEntry.allergens,
+                outOfStock: editingEntry.outOfStock,
+                frozen: editingEntry.frozen,
+              }}
+            />
+          </div>
           </div>
         </div>
       )}

@@ -671,10 +671,10 @@ export default function CategoriesPage() {
         )}
       </aside>
 
-      {/* ── Edit Modal ── */}
+      {/* ── Edit side panel ── */}
       {editingCategory && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
-          <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end" style={{ background: "rgba(0,0,0,.5)" }} onClick={() => setEditingCategory(null)}>
+          <div className="bg-white w-full md:w-[420px] md:h-full rounded-t-3xl md:rounded-none max-h-[90vh] md:max-h-none overflow-auto shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
 
             {/* Modal header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid #E7E5E4" }}>

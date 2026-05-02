@@ -420,6 +420,8 @@
     "settings.publishing.publishMenu": "Pubblica menu",
     "settings.publishing.working": "In corso...",
     "settings.saveAll": "Salva Modifiche",
-    "settings.savingAll": "Salvataggio..."
+    "settings.savingAll": "Salvataggio...",
+    "entries.preview.cardTitle": "Anteprima — vista lista",
+    "entries.preview.expandedTitle": "Anteprima — vista dettaglio"
   }
 }
