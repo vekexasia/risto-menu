@@ -94,6 +94,7 @@
     "common.remove": "Rimuovi",
     "common.add": "Aggiungi",
     "layout.menuAdmin": "Menu Admin",
+    "layout.adminLanguage": "Lingua interfaccia",
     "layout.invalidSession": "Sessione non valida",
     "layout.invalidSessionDesc": "Impossibile verificare l'autenticazione. Aggiorna la pagina o ricontrolla la configurazione di Cloudflare Access.",
     "layout.reconnect": "Riconnetti",

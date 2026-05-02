@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { getMe, type MeResponse } from "@/lib/api";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { useTranslations } from "@/lib/i18n";
+import { AdminLocalePicker } from "./AdminLocalePicker";
 
 interface AuthState {
   loading: boolean;
@@ -234,6 +235,7 @@ export default function AdminContent({
         </nav>
 
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          <AdminLocalePicker />
           <div title={authState.user.email || ""} style={{ width: 30, height: 30, borderRadius: "50%", background: "#BBA8E1", color: "#432975", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default" }}>
             {userInitials}
           </div>
