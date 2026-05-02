@@ -6,6 +6,7 @@ import AdminContent from "../AdminContent";
 
 import AdminCategoriesPage from "@/components/admin/pages/CategoriesPage";
 import CategoryEntriesPage from "@/components/admin/pages/EntriesPage";
+import EditEntryPage from "@/components/admin/pages/EditEntryPage";
 import AdminHoursPage from "@/components/admin/pages/HoursPage";
 import AdminMenusPage from "@/components/admin/pages/MenusPage";
 import AdminSettingsPage, { type SettingsSection } from "@/components/admin/pages/SettingsPage";
@@ -22,6 +23,9 @@ function AdminRouterInner() {
       break;
     case "entries":
       content = <CategoryEntriesPage />;
+      break;
+    case "entries-edit":
+      content = <EditEntryPage />;
       break;
     case "hours":
       content = <AdminHoursPage />;

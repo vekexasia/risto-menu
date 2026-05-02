@@ -1,37 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
-import { uploadEntryImage, deleteEntryImage } from "@/lib/imageUpload";
-import { ApiError, updateEntry, createEntry, reorderEntries, deleteEntry, moveEntry, translateText } from "@/lib/api";
-import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
+import { ApiError, updateEntry, reorderEntries, deleteEntry, translateText } from "@/lib/api";
+import { useRestaurantStore } from "@/stores/restaurantStore";
 import { SortableList, DragHandle } from "@/components/admin/SortableList";
-import { TranslationTabs } from "@/components/admin/TranslationTabs";
-import { MenuItemCardPreview, MenuItemExpandedPreview } from "@/components/admin/MenuItemPreview";
 import { useTranslations } from "@/lib/i18n";
 
 const STANDARD_TRANSLATION_LOCALES = ["it", "en", "de", "fr", "es", "nl", "ru", "pt"];
 const TRANSLATE_THROTTLE_MS = 2200; // Gentle pacing: ~27 requests/min, below backend's 30/min limit.
-
-// All available allergen ids — labels are looked up via t("entries.allergen.<id>")
-const ALLERGEN_IDS = [
-  "Glutine",
-  "Crostacei",
-  "Uova",
-  "Pesce",
-  "Arachidi",
-  "Soia",
-  "Latte-e-Derivati",
-  "Frutta-a-Guscio",
-  "Sedano",
-  "Senape",
-  "Sesamo",
-  "Anidride-Solforosa-e-Solfiti",
-  "Lupini",
-  "Molluschi",
-];
 
 interface I18nData {
   [locale: string]: {
@@ -61,84 +40,6 @@ interface Category {
   name: string;
 }
 
-// Simple rich text editor component
-function RichTextEditor({
-  value,
-  onChange,
-  placeholder,
-  rows = 3,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  rows?: number;
-}) {
-  const t = useTranslations("admin");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const insertFormatting = (before: string, after: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = value.substring(start, end);
-    const newText =
-      value.substring(0, start) + before + selectedText + after + value.substring(end);
-
-    onChange(newText);
-
-    // Restore cursor position
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + before.length,
-        end + before.length
-      );
-    }, 0);
-  };
-
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex gap-1 p-1 bg-gray-50 border-b">
-        <button
-          type="button"
-          onClick={() => insertFormatting("<b>", "</b>")}
-          className="px-2 py-1 text-sm font-bold hover:bg-gray-200 rounded"
-          title={t("entries.editor.bold")}
-        >
-          B
-        </button>
-        <button
-          type="button"
-          onClick={() => insertFormatting("<i>", "</i>")}
-          className="px-2 py-1 text-sm italic hover:bg-gray-200 rounded"
-          title={t("entries.editor.italic")}
-        >
-          I
-        </button>
-        <button
-          type="button"
-          onClick={() => insertFormatting("<u>", "</u>")}
-          className="px-2 py-1 text-sm underline hover:bg-gray-200 rounded"
-          title={t("entries.editor.underline")}
-        >
-          U
-        </button>
-      </div>
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-sm resize-none focus:outline-none"
-        rows={rows}
-        placeholder={placeholder}
-      />
-    </div>
-  );
-}
-
 // Render rich text with HTML tags
 function RichText({ html, className }: { html: string; className?: string }) {
   // Only allow safe tags: b, i, u
@@ -162,42 +63,20 @@ export default function EntriesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryId = searchParams.get("category");
-  const entryId = searchParams.get("entry");
-  const entryName = searchParams.get("entryName");
-
-  const allCategories = useCategories();
 
   const [category, setCategory] = useState<Category | null>(null);
   const [entries, setEntries] = useState<MenuEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Edit modal state
-  const [editingEntry, setEditingEntry] = useState<MenuEntry | null>(null);
-  const [dismissedDeepLinkEntryId, setDismissedDeepLinkEntryId] = useState<string | null>(null);
-  const [isNewEntry, setIsNewEntry] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
   // Reorder mode state
   const [reorderMode, setReorderMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   /** Menu filter: "ALL" = no filter, "NONE" = entries with no menu memberships, otherwise a menu id. */
   const [menuFilter, setMenuFilter] = useState<string>("ALL");
-  // Delete confirmation state
+  // Delete confirmation state (used by the inline trash button on each row)
   const [deleteConfirm, setDeleteConfirm] = useState<MenuEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Move entry state
-  const [movingEntry, setMovingEntry] = useState(false);
-  const [selectedTargetCategory, setSelectedTargetCategory] = useState<string>("");
-
-  // Image upload state
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Active translation tab
-  const [activeTranslationTab, setActiveTranslationTab] = useState("it");
 
   // Bulk translate state
   const [bulkTranslating, setBulkTranslating] = useState(false);
@@ -210,37 +89,9 @@ export default function EntriesPage() {
     status?: string;
   } | null>(null);
 
-  const closeEditModal = () => {
-    if (entryId) {
-      setDismissedDeepLinkEntryId(entryId);
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("entry");
-      params.delete("entryName");
-      const nextUrl = `/admin?${params.toString()}`;
-      window.history.replaceState(null, "", nextUrl);
-      router.replace(nextUrl);
-    }
-    setEditingEntry(null);
-    setIsNewEntry(false);
-  };
-
   // Load all categories for the move dropdown (also loads entries when API is enabled)
   const { loadRestaurant, categoriesCache, isLoading: storeLoading, data: restaurantData } = useRestaurantStore();
   const primaryLocale = restaurantData?.features?.primaryLocale ?? "it";
-  const primaryLocaleLabel = (
-    {
-      it: "Italiano",
-      en: "English",
-      de: "Deutsch",
-      fr: "Français",
-      es: "Español",
-      nl: "Nederlands",
-      ru: "Русский",
-      pt: "Português",
-    } as Record<string, string>
-  )[primaryLocale]
-    ?? (restaurantData?.features?.customLocales ?? []).find((c) => c.code === primaryLocale)?.name
-    ?? primaryLocale;
 
   useEffect(() => {
     loadRestaurant();
@@ -283,18 +134,6 @@ export default function EntriesPage() {
     setEntries(loadedEntries);
     setLoading(false);
   }, [categoryId, categoriesCache, storeLoading, restaurantData]);
-
-  useEffect(() => {
-    if ((!entryId && !entryName) || entries.length === 0) return;
-    if (entryId && dismissedDeepLinkEntryId === entryId) return;
-    if (entryId && editingEntry?.id === entryId) return;
-    const entry = entries.find((e) => e.id === entryId) ?? entries.find((e) => entryName && e.name === entryName);
-    if (!entry) return;
-    setDismissedDeepLinkEntryId(null);
-    setEditingEntry(entry);
-    setIsNewEntry(false);
-    setActiveTranslationTab(primaryLocale);
-  }, [entryId, entryName, entries, editingEntry?.id, dismissedDeepLinkEntryId]);
 
   useEffect(() => {
     if (!categoryId) {
@@ -352,162 +191,13 @@ export default function EntriesPage() {
   const describeWorkItem = (item: { entry: MenuEntry; locale: string; field: "name" | "desc" }) =>
     `${item.entry.name} → ${item.locale.toUpperCase()} (${item.field === "name" ? t("entries.fieldNameLabel") : t("entries.fieldDescLabel")})`;
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0] || !editingEntry || !categoryId) return;
-
-    const file = e.target.files[0];
-    setUploadingImage(true);
-    setSaveError(null);
-
-    try {
-      const imageUrl = await uploadEntryImage(editingEntry.id, file);
-
-      setEditingEntry({ ...editingEntry, image: imageUrl });
-      setEntries((prev) =>
-        prev.map((e) =>
-          e.id === editingEntry.id ? { ...e, image: imageUrl } : e
-        )
-      );
-    } catch (err) {
-      console.error("Error uploading image:", err);
-      setSaveError(t("entries.uploadFailed"));
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
+  // Navigation helpers — the dish form lives at /admin?s=entries-edit
+  const openEntry = (entryId: string) => {
+    router.push(`/admin?s=entries-edit&entry=${entryId}&category=${categoryId ?? ""}`);
   };
 
-  const handleDeleteImage = async () => {
-    if (!editingEntry || !categoryId) return;
-
-    setUploadingImage(true);
-    setSaveError(null);
-
-    try {
-      const success = await deleteEntryImage(editingEntry.id);
-
-      if (success) {
-        setEditingEntry({ ...editingEntry, image: undefined });
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.id === editingEntry.id ? { ...e, image: undefined } : e
-          )
-        );
-      } else {
-        setSaveError(t("entries.removeImageFailed"));
-      }
-    } catch (err) {
-      console.error("Error deleting image:", err);
-      setSaveError(t("entries.removeImageFailed"));
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleSaveEntry = async () => {
-    if (!editingEntry || !categoryId) return;
-
-    setSaving(true);
-    setSaveError(null);
-
-    try {
-      const entryPayload = {
-        name: editingEntry.name,
-        description: editingEntry.desc || "",
-        price: editingEntry.price,
-        outOfStock: editingEntry.outOfStock,
-        frozen: editingEntry.frozen,
-        allergens: editingEntry.allergens,
-        priceUnit: editingEntry.priceUnit || undefined,
-        i18n: sanitizeI18nData(editingEntry.i18n),
-        menuIds: editingEntry.menuIds,
-        hidden: editingEntry.hidden,
-      };
-
-      await updateEntry(editingEntry.id, entryPayload);
-
-      // Update local state
-      setEntries((prev) =>
-        prev.map((e) => (e.id === editingEntry.id ? editingEntry : e))
-      );
-
-      closeEditModal();
-    } catch (err) {
-      console.error("Error saving entry:", err);
-      setSaveError(t("entries.saveFailed"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleAllergen = (allergenId: string) => {
-    if (!editingEntry) return;
-
-    const currentAllergens = editingEntry.allergens || [];
-    const newAllergens = currentAllergens.includes(allergenId)
-      ? currentAllergens.filter((a) => a !== allergenId)
-      : [...currentAllergens, allergenId];
-
-    setEditingEntry({ ...editingEntry, allergens: newAllergens });
-  };
-
-  // Create new entry
-  const handleAddEntry = () => {
-    const maxOrder = entries.length > 0 ? Math.max(...entries.map(e => e.order)) + 1 : 0;
-    const defaultMenuIds = (restaurantData?.menus ?? []).map((m) => m.id);
-    const newEntry: MenuEntry = {
-      id: "", // Will be set after creation
-      name: "",
-      desc: "",
-      price: 0,
-      order: maxOrder,
-      outOfStock: false,
-      frozen: false,
-      allergens: [],
-      menuIds: defaultMenuIds,
-      hidden: false,
-    };
-    setEditingEntry(newEntry);
-    setIsNewEntry(true);
-    setActiveTranslationTab(primaryLocale);
-  };
-
-  // Save new or existing entry
-  const handleSaveNewEntry = async () => {
-    if (!editingEntry || !categoryId) return;
-
-    setSaving(true);
-    setSaveError(null);
-
-    try {
-      const res = await createEntry(categoryId, {
-        name: editingEntry.name,
-        description: editingEntry.desc || "",
-        price: editingEntry.price,
-        order: editingEntry.order,
-        outOfStock: editingEntry.outOfStock,
-        frozen: editingEntry.frozen,
-        allergens: editingEntry.allergens,
-        priceUnit: editingEntry.priceUnit || undefined,
-        i18n: sanitizeI18nData(editingEntry.i18n),
-        menuIds: editingEntry.menuIds,
-        hidden: editingEntry.hidden,
-      });
-      const newId = res.id;
-
-      // Add to local state with the new ID
-      const savedEntry = { ...editingEntry, id: newId };
-      setEntries((prev) => [...prev, savedEntry]);
-
-      closeEditModal();
-    } catch (err) {
-      console.error("Error creating entry:", err);
-      setSaveError(t("entries.createFailed"));
-    } finally {
-      setSaving(false);
-    }
+  const openNewEntry = () => {
+    router.push(`/admin?s=entries-edit&entry=new&category=${categoryId ?? ""}`);
   };
 
   // Move entry up or down
@@ -540,30 +230,6 @@ export default function EntriesPage() {
       console.error("Error deleting entry:", err);
     } finally {
       setDeleting(false);
-    }
-  };
-
-  // Move entry to another category
-  const handleMoveEntryToCategory = async (targetCategoryId: string) => {
-    if (!editingEntry || !categoryId || !targetCategoryId || targetCategoryId === categoryId) {
-      return;
-    }
-
-    setMovingEntry(true);
-    setSaveError(null);
-
-    try {
-      await moveEntry(editingEntry.id, targetCategoryId);
-
-      // Close modal and navigate to target category
-      setEditingEntry(null);
-      setSelectedTargetCategory("");
-      router.push(`/admin?s=entries&category=${targetCategoryId}`);
-    } catch (err) {
-      console.error("Error moving entry:", err);
-      setSaveError(t("entries.moveFailed"));
-    } finally {
-      setMovingEntry(false);
     }
   };
 
@@ -792,7 +458,7 @@ export default function EntriesPage() {
             </svg>
           </button>
           <button
-            onClick={handleAddEntry}
+            onClick={openNewEntry}
             className="p-2 bg-primary text-white rounded-lg hover:bg-primary/90"
             title={t("entries.addEntry")}
           >
@@ -960,11 +626,7 @@ export default function EntriesPage() {
               className={`bg-white rounded-xl p-4 shadow-sm flex gap-4 ${
                 entry.outOfStock ? "opacity-50" : ""
               } cursor-pointer hover:shadow-md transition-shadow`}
-              onClick={() => {
-                setEditingEntry(entry);
-                setIsNewEntry(false);
-                setActiveTranslationTab(primaryLocale);
-              }}
+              onClick={() => openEntry(entry.id)}
             >
               <div className="flex-1 flex gap-4">
                 <div className="flex-1">
@@ -1032,455 +694,6 @@ export default function EntriesPage() {
       {entries.length === 0 && (
         <div className="text-center text-gray-500 py-8">
           {t("entries.entryEmpty")}
-        </div>
-      )}
-
-      {/* Edit/Add Split Overlay */}
-      {editingEntry && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center md:p-4" onClick={closeEditModal}>
-          <div className="bg-white w-full md:w-[min(95vw,1100px)] rounded-t-3xl md:rounded-2xl max-h-[95vh] md:max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
-          {/* Form pane */}
-          <div className="flex flex-col flex-1 md:basis-3/5 md:max-w-[60%] overflow-hidden">
-          <div className="flex flex-col flex-1 overflow-y-auto">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center z-10">
-              <h3 className="font-bold text-lg">{isNewEntry ? t("entries.modal.newTitle") : t("entries.modal.editTitle")}</h3>
-              <button
-                onClick={closeEditModal}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-6 h-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-4 space-y-4">
-              {/* Image Section - only for existing entries */}
-              {!isNewEntry && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("entries.modal.imageLabel")}
-                </label>
-                {editingEntry.image ? (
-                  <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-200">
-                    <Image
-                      src={editingEntry.image}
-                      alt={editingEntry.name}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                    <div className="absolute bottom-2 right-2 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingImage}
-                        className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 disabled:opacity-50"
-                        title={t("entries.modal.changeImage")}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={2}
-                          stroke="currentColor"
-                          className="w-5 h-5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDeleteImage}
-                        disabled={uploadingImage}
-                        className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 disabled:opacity-50"
-                        title={t("entries.modal.removeImage")}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={2}
-                          stroke="currentColor"
-                          className="w-5 h-5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    {uploadingImage && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <div className="text-white font-medium">{t("common.loading")}</div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="w-full aspect-video rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-                  >
-                    {uploadingImage ? (
-                      <div className="text-gray-500">{t("common.loading")}</div>
-                    ) : (
-                      <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-10 h-10 text-gray-400"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                          />
-                        </svg>
-                        <span className="text-sm text-gray-500">
-                          {t("entries.modal.uploadImageCta")}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-              )}
-
-              {/* Translation Tabs */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("entries.modal.nameDescLabel")}
-                </label>
-                <TranslationTabs
-                  activeTab={activeTranslationTab}
-                  onTabChange={setActiveTranslationTab}
-                  primaryLocale={primaryLocale}
-                  enabledLocales={restaurantData?.features?.enabledLocales}
-                  disabledLocales={restaurantData?.features?.disabledLocales}
-                  customLocales={restaurantData?.features?.customLocales}
-                  fields={[
-                    { key: "name", label: t("entries.modal.nameField"), sourceValue: editingEntry.name },
-                    { key: "desc", label: t("entries.modal.descField"), multiline: true, sourceValue: editingEntry.desc || "" },
-                  ]}
-                  i18n={(editingEntry.i18n || {}) as Record<string, Record<string, string>>}
-                  onI18nChange={(updated) =>
-                    setEditingEntry((prev) => prev ? { ...prev, i18n: updated as I18nData } : prev)
-                  }
-                >
-                  {/* Primary-locale fields */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        {t("entries.modal.namePrimary").replace("{locale}", primaryLocaleLabel)}
-                      </label>
-                      <input
-                        type="text"
-                        value={editingEntry.name}
-                        onChange={(e) =>
-                          setEditingEntry({ ...editingEntry, name: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        {t("entries.modal.descPrimary").replace("{locale}", primaryLocaleLabel)}
-                      </label>
-                      <RichTextEditor
-                        value={editingEntry.desc || ""}
-                        onChange={(value) =>
-                          setEditingEntry({ ...editingEntry, desc: value })
-                        }
-                        placeholder={t("entries.modal.descPlaceholder")}
-                      />
-                    </div>
-                  </div>
-                </TranslationTabs>
-              </div>
-
-              {/* Price */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("entries.modal.priceLabel")}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editingEntry.price}
-                    onChange={(e) =>
-                      setEditingEntry({
-                        ...editingEntry,
-                        price: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                </div>
-                <div className="w-24">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("entries.modal.unitLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    value={editingEntry.priceUnit || ""}
-                    onChange={(e) =>
-                      setEditingEntry({
-                        ...editingEntry,
-                        priceUnit: e.target.value || undefined,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder={t("entries.modal.unitPlaceholder")}
-                  />
-                </div>
-              </div>
-
-              {/* Toggles */}
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={editingEntry.outOfStock}
-                    onChange={(e) =>
-                      setEditingEntry({
-                        ...editingEntry,
-                        outOfStock: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">{t("entries.modal.outOfStock")}</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={editingEntry.frozen}
-                    onChange={(e) =>
-                      setEditingEntry({
-                        ...editingEntry,
-                        frozen: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">{t("entries.modal.frozen")}</span>
-                </label>
-              </div>
-
-              {/* Menu memberships */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("entries.modal.menuLabel")}
-                </label>
-                {allMenus.length === 0 ? (
-                  <p className="text-xs text-gray-500">{t("entries.modal.noMenusDefined")}</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {allMenus.map((menu) => {
-                      const isSelected = editingEntry.menuIds.includes(menu.id);
-                      return (
-                        <label
-                          key={menu.id}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            isSelected
-                              ? "bg-primary/10 border-primary"
-                              : "bg-white border-gray-200 hover:bg-gray-50"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              const next = isSelected
-                                ? editingEntry.menuIds.filter((id) => id !== menu.id)
-                                : [...editingEntry.menuIds, menu.id];
-                              setEditingEntry({ ...editingEntry, menuIds: next });
-                            }}
-                            className="sr-only"
-                          />
-                          <span className="flex-1">
-                            <span className="block text-sm font-medium">{menu.title}</span>
-                            <span className="block text-xs text-gray-500">{menu.code}</span>
-                          </span>
-                          {isSelected && (
-                            <span className="text-primary text-sm">✓</span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-                <label className="flex items-center gap-2 mt-3">
-                  <input
-                    type="checkbox"
-                    checked={editingEntry.hidden}
-                    onChange={(e) => setEditingEntry({ ...editingEntry, hidden: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">{t("entries.modal.hideFromPublic")}</span>
-                </label>
-              </div>
-
-              {/* Allergens */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("entries.modal.allergensLabel")}
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {ALLERGEN_IDS.map((id) => {
-                    const label = t(`entries.allergen.${id}`);
-                    return (
-                      <label
-                        key={id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                          editingEntry.allergens.includes(id)
-                            ? "bg-primary/10 border-primary"
-                            : "bg-white border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editingEntry.allergens.includes(id)}
-                          onChange={() => toggleAllergen(id)}
-                          className="sr-only"
-                        />
-                        <Image
-                          src={`/images/allergeni-${id}.png`}
-                          alt={label}
-                          width={24}
-                          height={24}
-                          className="rounded-full"
-                          unoptimized
-                        />
-                        <span className="text-sm">{label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Move to category - only for existing entries */}
-              {!isNewEntry && allCategories.length > 1 && (
-                <div className="border-t pt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("entries.modal.moveToCategory")}
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedTargetCategory}
-                      onChange={(e) => setSelectedTargetCategory(e.target.value)}
-                      className="flex-1 px-3 py-2 border rounded-lg bg-white"
-                      disabled={movingEntry}
-                    >
-                      <option value="">{t("entries.modal.selectCategory")}</option>
-                      {allCategories
-                        .filter((cat) => cat.id !== categoryId)
-                        .map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => handleMoveEntryToCategory(selectedTargetCategory)}
-                      disabled={!selectedTargetCategory || movingEntry}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-blue-700"
-                    >
-                      {movingEntry ? t("entries.modal.moving") : t("entries.modal.moveButton")}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="h-20" />
-
-              {/* Sticky modal footer */}
-              <div className="sticky bottom-0 -mx-4 -mb-4 bg-white border-t p-4 shadow-[0_-8px_20px_rgba(0,0,0,0.06)] z-10">
-                {saveError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm mb-3">
-                    {saveError}
-                  </div>
-                )}
-                <button
-                  onClick={isNewEntry ? handleSaveNewEntry : handleSaveEntry}
-                  disabled={saving || uploadingImage || (isNewEntry && !editingEntry.name.trim())}
-                  className="w-full py-3 bg-primary text-white rounded-lg font-medium disabled:opacity-50"
-                >
-                  {saving ? t("common.saving") : isNewEntry ? t("entries.modal.creatingEntry") : t("entries.modal.savingChanges")}
-                </button>
-              </div>
-            </div>
-          </div>
-          </div>
-          {/* Preview pane (desktop only) */}
-          <div className="hidden md:flex md:basis-2/5 md:max-w-[40%] flex-col bg-gray-50 border-l overflow-y-auto p-6 gap-3">
-            <h4 className="text-[10.5px] font-bold uppercase tracking-wide text-gray-500">
-              {t("entries.preview.cardTitle")}
-            </h4>
-            <div className="rounded-lg overflow-hidden border border-gray-200">
-              <MenuItemCardPreview
-                item={{
-                  name: editingEntry.name,
-                  description: editingEntry.desc,
-                  price: editingEntry.price,
-                  priceUnit: editingEntry.priceUnit,
-                  image: editingEntry.image,
-                  allergens: editingEntry.allergens,
-                  outOfStock: editingEntry.outOfStock,
-                  frozen: editingEntry.frozen,
-                }}
-              />
-            </div>
-            <h4 className="text-[10.5px] font-bold uppercase tracking-wide text-gray-500 mt-3">
-              {t("entries.preview.expandedTitle")}
-            </h4>
-            <MenuItemExpandedPreview
-              item={{
-                name: editingEntry.name,
-                description: editingEntry.desc,
-                price: editingEntry.price,
-                priceUnit: editingEntry.priceUnit,
-                image: editingEntry.image,
-                allergens: editingEntry.allergens,
-                outOfStock: editingEntry.outOfStock,
-                frozen: editingEntry.frozen,
-              }}
-            />
-          </div>
-          </div>
         </div>
       )}
 
