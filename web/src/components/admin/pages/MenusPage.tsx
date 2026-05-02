@@ -24,8 +24,9 @@ const CODE_RE = /^[a-z0-9-]+$/;
 
 export default function MenusPage() {
   const t = useTranslations("admin");
-  const { loadRestaurant } = useRestaurantStore();
+  const { loadRestaurant, data: restaurantData } = useRestaurantStore();
   const categories = useCategories();
+  const primaryLocale = restaurantData?.features?.primaryLocale ?? "it";
 
   const [menus, setMenus] = useState<AdminMenu[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export default function MenusPage() {
   const [editCode, setEditCode] = useState("");
   const [editI18n, setEditI18n] = useState<I18nData>({});
   const [editIcon, setEditIcon] = useState<MenuIconKind>("utensils");
-  const [activeTab, setActiveTab] = useState("it");
+  const [activeTab, setActiveTab] = useState(primaryLocale);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -107,7 +108,7 @@ export default function MenusPage() {
     setEditCode(menu.code);
     setEditI18n((menu.i18n ?? {}) as I18nData);
     setEditIcon((MENU_ICON_KINDS as readonly string[]).includes(menu.icon) ? (menu.icon as MenuIconKind) : "utensils");
-    setActiveTab("it");
+    setActiveTab(primaryLocale);
     setEditError(null);
   };
 
@@ -344,6 +345,10 @@ export default function MenusPage() {
                 <TranslationTabs
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
+                  primaryLocale={primaryLocale}
+                  enabledLocales={restaurantData?.features?.enabledLocales}
+                  disabledLocales={restaurantData?.features?.disabledLocales}
+                  customLocales={restaurantData?.features?.customLocales}
                   fields={[{ key: "title", label: t("menus.fieldTitle"), sourceValue: editTitle }]}
                   i18n={editI18n as Record<string, Record<string, string>>}
                   onI18nChange={(updated) => setEditI18n(updated as I18nData)}

@@ -58,6 +58,7 @@ admin.get('/settings', ...base, async (c) => {
       aiChatEnabled: schema.settings.aiChatEnabled,
       promotionAlert: schema.settings.promotionAlert,
       publicationState: schema.settings.publicationState,
+      primaryLocale: schema.settings.primaryLocale,
       enabledLocales: schema.settings.enabledLocales,
       disabledLocales: schema.settings.disabledLocales,
       customLocales: schema.settings.customLocales,
@@ -72,6 +73,7 @@ admin.get('/settings', ...base, async (c) => {
     aiChatEnabled: row.aiChatEnabled,
     promotionAlert: row.promotionAlert ?? null,
     publicationState: row.publicationState,
+    primaryLocale: row.primaryLocale,
     enabledLocales: row.enabledLocales ?? null,
     disabledLocales: row.disabledLocales ?? [],
     customLocales: row.customLocales ?? [],
@@ -90,6 +92,7 @@ admin.put('/settings', ...base, async (c) => {
   if (body.promotionAlert !== undefined) updates.promotionAlert = body.promotionAlert;
   if (body.chatAgentPrompt !== undefined) updates.chatAgentPrompt = body.chatAgentPrompt;
   if (body.aiChatEnabled !== undefined) updates.aiChatEnabled = body.aiChatEnabled;
+  if (body.primaryLocale !== undefined) updates.primaryLocale = body.primaryLocale;
   if (body.enabledLocales !== undefined) updates.enabledLocales = body.enabledLocales;
   if (body.disabledLocales !== undefined) updates.disabledLocales = body.disabledLocales;
   if (body.customLocales !== undefined) updates.customLocales = body.customLocales;

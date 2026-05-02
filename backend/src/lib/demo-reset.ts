@@ -53,6 +53,7 @@ const settings = {
   },
   chatAgentPrompt: 'You are the friendly assistant for Trattoria Demo. Recommend dishes from the demo menu only.',
   aiChatEnabled: true,
+  primaryLocale: 'it',
   enabledLocales: ['it', 'en', 'de', 'fr'],
   disabledLocales: ['es', 'nl', 'ru', 'pt'],
   customLocales: [{ code: 'vec', name: 'Veneto' }],
@@ -272,7 +273,7 @@ export async function resetDemoData(env: Env): Promise<void> {
     env.DB.prepare('DELETE FROM menus'),
     env.DB.prepare('DELETE FROM menu_variants'),
     env.DB.prepare('DELETE FROM menu_extras'),
-    env.DB.prepare(`UPDATE settings SET name = ?, payoff = ?, theme = ?, info = ?, socials = ?, opening_schedule = ?, promotion_alert = ?, chat_agent_prompt = ?, ai_chat_enabled = ?, enabled_locales = ?, disabled_locales = ?, custom_locales = ?, publication_state = ?, updated_at = ? WHERE id = 1`).bind(
+    env.DB.prepare(`UPDATE settings SET name = ?, payoff = ?, theme = ?, info = ?, socials = ?, opening_schedule = ?, promotion_alert = ?, chat_agent_prompt = ?, ai_chat_enabled = ?, primary_locale = ?, enabled_locales = ?, disabled_locales = ?, custom_locales = ?, publication_state = ?, updated_at = ? WHERE id = 1`).bind(
       settings.name,
       settings.payoff,
       JSON.stringify(settings.theme),
@@ -282,6 +283,7 @@ export async function resetDemoData(env: Env): Promise<void> {
       JSON.stringify(settings.promotionAlert),
       settings.chatAgentPrompt,
       settings.aiChatEnabled ? 1 : 0,
+      settings.primaryLocale,
       JSON.stringify(settings.enabledLocales),
       JSON.stringify(settings.disabledLocales),
       JSON.stringify(settings.customLocales),

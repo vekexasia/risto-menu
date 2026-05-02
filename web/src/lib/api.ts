@@ -114,6 +114,7 @@ export interface RestaurantSettingsResponse {
   aiChatEnabled: boolean;
   promotionAlert: Record<string, unknown> | null;
   publicationState: string;
+  primaryLocale: string;
   enabledLocales: string[] | null;
   disabledLocales: string[];
   customLocales: CustomLocale[];

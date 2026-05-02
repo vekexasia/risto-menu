@@ -550,6 +550,8 @@ export interface RestaurantData {
   features?: {
     /** Show the AI menu concierge chat. Defaults to false (hidden) when missing. */
     aiChat?: boolean;
+    /** Primary/source language for menu items. Defaults to 'it'. */
+    primaryLocale?: string;
     /** Locales enabled for translation. null/undefined = all enabled. */
     enabledLocales?: string[] | null;
     /** Locales completely disabled (not shown in admin or frontend). */

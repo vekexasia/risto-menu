@@ -359,6 +359,7 @@ export async function buildCatalogFromDb(
       openingSchedule: restaurant.openingSchedule,
       features: {
         aiChat: restaurant.aiChatEnabled,
+        primaryLocale: restaurant.primaryLocale,
         enabledLocales: restaurant.enabledLocales,
         disabledLocales: restaurant.disabledLocales,
         customLocales: restaurant.customLocales ?? [],

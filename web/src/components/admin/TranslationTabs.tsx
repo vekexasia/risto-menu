@@ -7,6 +7,7 @@ import { Flag } from "@/components/ui/Flag";
 import { useTranslations } from "@/lib/i18n";
 
 const STANDARD_LOCALE_META: Record<string, { label: string }> = {
+  it: { label: "Italiano" },
   en: { label: "English" },
   de: { label: "Deutsch" },
   fr: { label: "Français" },
@@ -17,8 +18,16 @@ const STANDARD_LOCALE_META: Record<string, { label: string }> = {
 };
 
 const STANDARD_LOCALES: Locale[] = (locales as readonly string[]).filter(
-  (l): l is Locale => l !== "it" && l in STANDARD_LOCALE_META
+  (l): l is Locale => l in STANDARD_LOCALE_META
 );
+
+const labelForLocale = (
+  code: string,
+  customLocales?: { code: string; name: string }[] | null,
+): string =>
+  STANDARD_LOCALE_META[code]?.label
+    ?? customLocales?.find((c) => c.code === code)?.name
+    ?? code;
 
 type I18nData = Record<string, Record<string, string>>;
 
@@ -32,16 +41,18 @@ export type TranslationField = {
 interface TranslationTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  /** Fields to show in non-Italian tabs (name, desc, etc.) */
+  /** Fields to show in non-primary tabs (name, desc, etc.) */
   fields: TranslationField[];
   /** Current i18n map: { [locale]: { [fieldKey]: value } } */
   i18n: I18nData;
   onI18nChange: (updated: I18nData) => void;
-  /** Content to render inside the Italian tab */
+  /** Content to render inside the primary-locale tab */
   children: React.ReactNode;
-  /** Enabled non-Italian locales for public visibility. null/undefined = all enabled. */
+  /** Primary/source locale for menu items. Defaults to "it". */
+  primaryLocale?: string;
+  /** Enabled non-primary locales for public visibility. null/undefined = all enabled. */
   enabledLocales?: string[] | null;
-  /** Disabled non-Italian locales — completely hidden from admin and frontend. */
+  /** Disabled non-primary locales — completely hidden from admin and frontend. */
   disabledLocales?: string[] | null;
   /** Admin-defined custom locales (e.g. [{code:"vec", name:"Veneto"}]) */
   customLocales?: { code: string; name: string; flagUrl?: string | null }[] | null;
@@ -63,17 +74,19 @@ export function TranslationTabs({
   i18n,
   onI18nChange,
   children,
+  primaryLocale = "it",
   enabledLocales,
   disabledLocales,
   customLocales,
 }: TranslationTabsProps) {
   const t = useTranslations("admin");
-  // Filter out disabled locales — they are completely hidden from admin.
+  // Filter out disabled locales and the primary locale — they are not shown as translation tabs.
   const disabledSet = new Set(disabledLocales ?? []);
   const allLocales: { code: string; label: string; customFlagUrl?: string | null }[] = [
-    ...STANDARD_LOCALES.map((l) => ({ code: l, label: STANDARD_LOCALE_META[l].label })),
-    ...(customLocales ?? []).map((cl) => ({ code: cl.code, label: cl.name, customFlagUrl: cl.flagUrl ?? null })),
+    ...STANDARD_LOCALES.filter((l) => l !== primaryLocale).map((l) => ({ code: l, label: STANDARD_LOCALE_META[l].label })),
+    ...(customLocales ?? []).filter((cl) => cl.code !== primaryLocale).map((cl) => ({ code: cl.code, label: cl.name, customFlagUrl: cl.flagUrl ?? null })),
   ].filter((l) => !disabledSet.has(l.code));
+  const primaryLabel = labelForLocale(primaryLocale, customLocales);
   const [translating, setTranslating] = useState<Record<string, boolean>>({});
 
   const getValue = (locale: string, fieldKey: string) =>
@@ -221,21 +234,21 @@ export function TranslationTabs({
 
       {/* Tab row */}
       <div className="flex gap-1 mb-3 flex-wrap">
-        {/* Italian */}
+        {/* Primary locale */}
         <button
           type="button"
-          onClick={() => onTabChange("it")}
+          onClick={() => onTabChange(primaryLocale)}
           className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "it"
+            activeTab === primaryLocale
               ? "bg-primary text-white"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
-          <Flag code="it" decorative />
-          <span>Italiano</span>
+          <Flag code={primaryLocale} decorative />
+          <span>{primaryLabel}</span>
         </button>
 
-        {/* Non-Italian locales */}
+        {/* Non-primary locales */}
         {allLocales.map(({ code, label, customFlagUrl }) => {
           const complete = isLocaleComplete(code);
           const isActive = activeTab === code;
@@ -278,11 +291,11 @@ export function TranslationTabs({
         })}
       </div>
 
-      {/* Italian tab content */}
-      {activeTab === "it" && <>{children}</>}
+      {/* Primary locale tab content */}
+      {activeTab === primaryLocale && <>{children}</>}
 
-      {/* Non-Italian tab content */}
-      {activeTab !== "it" && (() => {
+      {/* Non-primary tab content */}
+      {activeTab !== primaryLocale && (() => {
         const locale = activeTab;
         const localeInfo = allLocales.find((l) => l.code === locale) ?? { code: locale, label: locale };
         const isRunning = isTranslatingLocale(locale);

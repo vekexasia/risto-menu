@@ -86,3 +86,12 @@ test\.local
 (?i)^piatti$
 (?i)^lingua$
 (?i)^lingue$
+
+# ── Multi-language admin UI strings (false-positive person matches) ──
+(?i)^oberfl[äa]chensprache$
+(?i)^hauptsprache$
+(?i)^speisekarten?$
+(?i)^prinzipale$
+(?i)^prinsipale$
+(?i)^principale$
+(?i)^principal$

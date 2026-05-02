@@ -22,7 +22,7 @@ interface Category {
   i18n?: I18nData;
 }
 
-const STANDARD_TRANSLATION_LOCALES = ["en", "de", "fr", "es", "nl", "ru", "pt"];
+const STANDARD_TRANSLATION_LOCALES = ["it", "en", "de", "fr", "es", "nl", "ru", "pt"];
 const TRANSLATE_THROTTLE_MS = 2200;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -36,10 +36,13 @@ export default function CategoriesPage() {
 
   const disabledCodes = (data?.features?.disabledLocales ?? []) as string[];
   const customCodes = ((data?.features?.customLocales ?? []) as { code: string }[]).map((c) => c.code);
+  const primaryLocale = data?.features?.primaryLocale ?? "it";
   const dishTranslationLocales = Array.from(
     new Set(
-      [...STANDARD_TRANSLATION_LOCALES, ...customCodes].filter((c) => !disabledCodes.includes(c))
-    )
+      [...STANDARD_TRANSLATION_LOCALES, ...customCodes].filter(
+        (c) => c !== primaryLocale && !disabledCodes.includes(c),
+      ),
+    ),
   );
 
   const categories: Category[] = storeCategories.map((cat) => ({
@@ -64,7 +67,7 @@ export default function CategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState("");
   const [editI18n, setEditI18n] = useState<I18nData>({});
-  const [activeTab, setActiveTab] = useState("it");
+  const [activeTab, setActiveTab] = useState(primaryLocale);
   const [saving, setSaving] = useState(false);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -79,8 +82,8 @@ export default function CategoriesPage() {
   } | null>(null);
 
   const configuredLocales = Array.from(new Set([
-    ...(locales as readonly string[]).filter((l) => l !== "it" && !disabledCodes.includes(l)),
-    ...customCodes.filter((l) => !disabledCodes.includes(l)),
+    ...(locales as readonly string[]).filter((l) => l !== primaryLocale && !disabledCodes.includes(l)),
+    ...customCodes.filter((l) => l !== primaryLocale && !disabledCodes.includes(l)),
   ]));
 
   useEffect(() => {
@@ -121,7 +124,7 @@ export default function CategoriesPage() {
     setEditingCategory(category);
     setEditName(category.name);
     setEditI18n(category.i18n || {});
-    setActiveTab("it");
+    setActiveTab(primaryLocale);
     setSaveError(null);
   };
 
@@ -129,7 +132,7 @@ export default function CategoriesPage() {
     setEditingCategory({ id: "", name: "", order: categories.length, entryCount: 0, entriesWithMissingTranslations: 0, i18n: {} });
     setEditName("");
     setEditI18n({});
-    setActiveTab("it");
+    setActiveTab(primaryLocale);
     setSaveError(null);
   };
 
@@ -183,12 +186,12 @@ export default function CategoriesPage() {
   };
 
   const handleBulkTranslateCategoryNames = async (overwrite = false) => {
-    const nonItLocales = Array.from(
+    const targetLocales = Array.from(
       new Set(
         [
           ...STANDARD_TRANSLATION_LOCALES,
           ...customCodes,
-        ].filter((c) => !disabledCodes.includes(c))
+        ].filter((c) => c !== primaryLocale && !disabledCodes.includes(c))
       )
     );
 
@@ -196,7 +199,7 @@ export default function CategoriesPage() {
     const workItems: WorkItem[] = [];
     for (const cat of categories) {
       if (!cat.name.trim()) continue;
-      for (const locale of nonItLocales) {
+      for (const locale of targetLocales) {
         const existing = cat.i18n?.[locale]?.name;
         if (!existing || overwrite) {
           workItems.push({ category: cat, locale, sourceText: cat.name });
@@ -696,6 +699,7 @@ export default function CategoriesPage() {
               <TranslationTabs
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
+                primaryLocale={primaryLocale}
                 enabledLocales={data?.features?.enabledLocales}
                 disabledLocales={data?.features?.disabledLocales}
                 customLocales={data?.features?.customLocales}

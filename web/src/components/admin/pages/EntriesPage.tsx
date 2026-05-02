@@ -11,7 +11,7 @@ import { SortableList, DragHandle } from "@/components/admin/SortableList";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
 import { useTranslations } from "@/lib/i18n";
 
-const STANDARD_TRANSLATION_LOCALES = ["en", "de", "fr", "es", "nl", "ru", "pt"];
+const STANDARD_TRANSLATION_LOCALES = ["it", "en", "de", "fr", "es", "nl", "ru", "pt"];
 const TRANSLATE_THROTTLE_MS = 2200; // Gentle pacing: ~27 requests/min, below backend's 30/min limit.
 
 // All available allergen ids — labels are looked up via t("entries.allergen.<id>")
@@ -225,6 +225,21 @@ export default function EntriesPage() {
 
   // Load all categories for the move dropdown (also loads entries when API is enabled)
   const { loadRestaurant, categoriesCache, isLoading: storeLoading, data: restaurantData } = useRestaurantStore();
+  const primaryLocale = restaurantData?.features?.primaryLocale ?? "it";
+  const primaryLocaleLabel = (
+    {
+      it: "Italiano",
+      en: "English",
+      de: "Deutsch",
+      fr: "Français",
+      es: "Español",
+      nl: "Nederlands",
+      ru: "Русский",
+      pt: "Português",
+    } as Record<string, string>
+  )[primaryLocale]
+    ?? (restaurantData?.features?.customLocales ?? []).find((c) => c.code === primaryLocale)?.name
+    ?? primaryLocale;
 
   useEffect(() => {
     loadRestaurant();
@@ -277,7 +292,7 @@ export default function EntriesPage() {
     setDismissedDeepLinkEntryId(null);
     setEditingEntry(entry);
     setIsNewEntry(false);
-    setActiveTranslationTab("it");
+    setActiveTranslationTab(primaryLocale);
   }, [entryId, entryName, entries, editingEntry?.id, dismissedDeepLinkEntryId]);
 
   useEffect(() => {
@@ -298,7 +313,7 @@ export default function EntriesPage() {
     new Set([
       ...STANDARD_TRANSLATION_LOCALES,
       ...customTranslationLocales,
-    ].filter((code) => !disabledTranslationLocales.includes(code)))
+    ].filter((code) => code !== primaryLocale && !disabledTranslationLocales.includes(code)))
   );
 
   const allMenus = restaurantData?.menus ?? [];
@@ -455,7 +470,7 @@ export default function EntriesPage() {
     };
     setEditingEntry(newEntry);
     setIsNewEntry(true);
-    setActiveTranslationTab("it");
+    setActiveTranslationTab(primaryLocale);
   };
 
   // Save new or existing entry
@@ -560,8 +575,8 @@ export default function EntriesPage() {
 
     const disabledCodes = (restaurantData?.features?.disabledLocales ?? []) as string[];
     const customCodes = ((restaurantData?.features?.customLocales ?? []) as { code: string }[]).map((c) => c.code);
-    const standardCodes = STANDARD_TRANSLATION_LOCALES.filter((l) => !disabledCodes.includes(l));
-    const nonItLocales = Array.from(new Set([...standardCodes, ...customCodes.filter((l) => !disabledCodes.includes(l))]));
+    const standardCodes = STANDARD_TRANSLATION_LOCALES.filter((l) => l !== primaryLocale && !disabledCodes.includes(l));
+    const targetLocales = Array.from(new Set([...standardCodes, ...customCodes.filter((l) => l !== primaryLocale && !disabledCodes.includes(l))]));
 
     type WorkItem = {
       entry: MenuEntry;
@@ -573,7 +588,7 @@ export default function EntriesPage() {
     const workItems: WorkItem[] = [];
 
     for (const entry of entries) {
-      for (const locale of nonItLocales) {
+      for (const locale of targetLocales) {
         if (entry.name.trim()) {
           const existing = entry.i18n?.[locale]?.["name"];
           if (!existing || overwrite) {
@@ -947,7 +962,7 @@ export default function EntriesPage() {
               onClick={() => {
                 setEditingEntry(entry);
                 setIsNewEntry(false);
-                setActiveTranslationTab("it");
+                setActiveTranslationTab(primaryLocale);
               }}
             >
               <div className="flex-1 flex gap-4">
@@ -1166,6 +1181,7 @@ export default function EntriesPage() {
                 <TranslationTabs
                   activeTab={activeTranslationTab}
                   onTabChange={setActiveTranslationTab}
+                  primaryLocale={primaryLocale}
                   enabledLocales={restaurantData?.features?.enabledLocales}
                   disabledLocales={restaurantData?.features?.disabledLocales}
                   customLocales={restaurantData?.features?.customLocales}
@@ -1178,11 +1194,11 @@ export default function EntriesPage() {
                     setEditingEntry((prev) => prev ? { ...prev, i18n: updated as I18nData } : prev)
                   }
                 >
-                  {/* Italian fields */}
+                  {/* Primary-locale fields */}
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        {t("entries.modal.nameItalianMain")}
+                        {t("entries.modal.namePrimary").replace("{locale}", primaryLocaleLabel)}
                       </label>
                       <input
                         type="text"
@@ -1195,7 +1211,7 @@ export default function EntriesPage() {
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        {t("entries.modal.descItalianMain")}
+                        {t("entries.modal.descPrimary").replace("{locale}", primaryLocaleLabel)}
                       </label>
                       <RichTextEditor
                         value={editingEntry.desc || ""}

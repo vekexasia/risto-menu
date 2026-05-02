@@ -156,7 +156,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
   const [menuNoticeEnabled, setMenuNoticeEnabled] = useState(true);
   const [menuNoticeText, setMenuNoticeText] = useState("* Avvisa sempre il personale di allergie e/o intolleranze alimentari.\n\n* Alcune pietanze potrebbero contenere ingredienti surgelati/congelati secondo la stagionalità del prodotto e le esigenze del mercato");
   const [menuNoticeI18n, setMenuNoticeI18n] = useState<Record<string, Record<string, string>>>({});
-  const [menuNoticeTab, setMenuNoticeTab] = useState("it");
+  const [menuNoticeTab, setMenuNoticeTab] = useState<string>("it");
 
   const [promoTitle, setPromoTitle] = useState("");
   const [promoContent, setPromoContent] = useState("");
@@ -170,9 +170,11 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
   const [chatAgentPrompt, setChatAgentPrompt] = useState("");
   const [aiChatEnabled, setAiChatEnabled] = useState(false);
 
-  const STANDARD_NON_IT = locales.filter((l) => l !== "it" && l !== "vec") as string[];
   const { data: restaurantStoreData, loadRestaurant } = useRestaurantStore();
-  const [enabledLocales, setEnabledLocales] = useState<string[]>(STANDARD_NON_IT);
+  const primaryLocale = restaurantStoreData?.features?.primaryLocale ?? "it";
+  const [primaryLocaleDraft, setPrimaryLocaleDraft] = useState<string>("it");
+  const STANDARD_NON_PRIMARY = locales.filter((l) => l !== primaryLocale && l !== "vec") as string[];
+  const [enabledLocales, setEnabledLocales] = useState<string[]>(STANDARD_NON_PRIMARY);
   const [disabledLocales, setDisabledLocales] = useState<string[]>([]);
   const [customLocales, setCustomLocales] = useState<{ code: string; name: string; flagUrl?: string | null }[]>([]);
   const [newLocaleCode, setNewLocaleCode] = useState("");
@@ -203,6 +205,10 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
     setFacebook(restaurantStoreData.socials?.facebook || "");
     setInstagram(restaurantStoreData.socials?.instagram || "");
     setWhatsapp(restaurantStoreData.socials?.whatsapp || "");
+    if (restaurantStoreData.features?.primaryLocale) {
+      setPrimaryLocaleDraft(restaurantStoreData.features.primaryLocale);
+      setMenuNoticeTab((current) => current === "it" ? restaurantStoreData.features!.primaryLocale! : current);
+    }
     if (restaurantStoreData.features?.enabledLocales != null) {
       setEnabledLocales(restaurantStoreData.features.enabledLocales);
     }
@@ -222,6 +228,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
         setChatAgentPrompt(settings.chatAgentPrompt || "");
         setAiChatEnabled(settings.aiChatEnabled ?? false);
         setPublished(settings.publicationState === "published");
+        if (settings.primaryLocale) setPrimaryLocaleDraft(settings.primaryLocale);
         if (settings.enabledLocales != null) setEnabledLocales(settings.enabledLocales);
         if (settings.disabledLocales) setDisabledLocales(settings.disabledLocales);
         if (settings.customLocales) setCustomLocales(settings.customLocales);
@@ -280,6 +287,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
         socials: { facebook, instagram, whatsapp },
         chatAgentPrompt,
         aiChatEnabled,
+        primaryLocale: primaryLocaleDraft,
         enabledLocales,
         disabledLocales,
         customLocales,
@@ -487,6 +495,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                 <TranslationTabs
                   activeTab={menuNoticeTab}
                   onTabChange={setMenuNoticeTab}
+                  primaryLocale={primaryLocale}
                   fields={[{ key: "text", label: t("settings.menuNotice.fieldText"), multiline: true, sourceValue: menuNoticeText }]}
                   i18n={menuNoticeI18n}
                   onI18nChange={setMenuNoticeI18n}
@@ -494,7 +503,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                   disabledLocales={disabledLocales}
                   customLocales={customLocales}
                 >
-                  <Field label={t("settings.menuNotice.italianText")}>
+                  <Field label={t("settings.menuNotice.primaryText")}>
                     <textarea
                       className="adm-textarea"
                       style={{ ...textareaStyle, minHeight: 120 }}
@@ -586,9 +595,31 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                   {t("settings.languages.intro")}
                 </p>
 
+                {/* Primary locale picker */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, padding: "10px 12px", marginBottom: 14, background: T.surface, borderRadius: 6, border: `1px solid ${T.border}` }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: T.dark, margin: 0 }}>{t("settings.languages.primaryLabel")}</p>
+                    <p style={{ fontSize: 11, color: T.off, margin: "2px 0 0" }}>{t("settings.languages.primaryDesc")}</p>
+                  </div>
+                  <select
+                    value={primaryLocaleDraft}
+                    onChange={(e) => setPrimaryLocaleDraft(e.target.value)}
+                    className="adm-input"
+                    style={{ height: 32, borderRadius: 6, border: `1px solid ${T.border}`, padding: "0 8px", fontSize: 13, background: "#fff", flexShrink: 0 }}
+                  >
+                    {(["it", "en", "de", "fr", "es", "nl", "ru", "pt"] as const).map((code) => {
+                      const label: Record<string, string> = { it: "Italiano", en: "English", de: "Deutsch", fr: "Français", es: "Español", nl: "Nederlands", ru: "Русский", pt: "Português" };
+                      return <option key={code} value={code}>{label[code]}</option>;
+                    })}
+                    {customLocales.map((cl) => (
+                      <option key={cl.code} value={cl.code}>{cl.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Standard locales */}
                 <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{t("settings.languages.standard")}</p>
-                {STANDARD_NON_IT.map((locale) => {
+                {STANDARD_NON_PRIMARY.map((locale: string) => {
                   const LABEL: Record<string, string> = { en: "English", de: "Deutsch", fr: "Français", es: "Español", nl: "Nederlands", ru: "Русский", pt: "Português" };
                   const CODE: Record<string, string> = { en: "EN", de: "DE", fr: "FR", es: "ES", nl: "NL", ru: "RU", pt: "PT" };
                   const state: "off" | "hidden" | "live" = disabledLocales.includes(locale) ? "off" : enabledLocales.includes(locale) ? "live" : "hidden";
