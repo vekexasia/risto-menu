@@ -4,6 +4,7 @@ import { useState } from "react";
 import { locales, type Locale } from "@/lib/i18n-config";
 import { translateText } from "@/lib/api";
 import { Flag } from "@/components/ui/Flag";
+import { useTranslations } from "@/lib/i18n";
 
 const STANDARD_LOCALE_META: Record<string, { label: string }> = {
   en: { label: "English" },
@@ -66,6 +67,7 @@ export function TranslationTabs({
   disabledLocales,
   customLocales,
 }: TranslationTabsProps) {
+  const t = useTranslations("admin");
   // Filter out disabled locales — they are completely hidden from admin.
   const disabledSet = new Set(disabledLocales ?? []);
   const allLocales: { code: string; label: string; customFlagUrl?: string | null }[] = [
@@ -194,25 +196,25 @@ export function TranslationTabs({
           disabled={bulkRunning}
           className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          Mancanti
+          {t("translationTabs.missing")}
         </button>
         <button
           type="button"
           onClick={() => {
-            if (window.confirm("Ritraduci tutto? Sovrascriverà le traduzioni esistenti.")) {
+            if (window.confirm(t("translationTabs.retranslateConfirm"))) {
               translateBulkAcrossLocales(true);
             }
           }}
           disabled={bulkRunning}
           className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors"
         >
-          Ritraduci
+          {t("translationTabs.retranslate")}
         </button>
         {bulkProgress && (
           <span className="text-xs text-gray-500">
             {bulkRunning
-              ? `Traduzione ${bulkProgress.done}/${bulkProgress.total}…`
-              : `Completato (${bulkProgress.done}/${bulkProgress.total})`}
+              ? t("translationTabs.translatingProgress").replace("{done}", String(bulkProgress.done)).replace("{total}", String(bulkProgress.total))
+              : t("translationTabs.completedProgress").replace("{done}", String(bulkProgress.done)).replace("{total}", String(bulkProgress.total))}
           </span>
         )}
       </div>
@@ -255,7 +257,7 @@ export function TranslationTabs({
               <span>{label}</span>
               {!isPublic && (
                 <span className={`text-xs px-1 rounded-full leading-4 ${isActive ? "bg-gray-300 text-gray-700" : "bg-gray-100 text-gray-400"}`}>
-                  nascosta
+                  {t("translationTabs.hidden")}
                 </span>
               )}
               <span
@@ -295,7 +297,7 @@ export function TranslationTabs({
                 disabled={isRunning}
                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors"
               >
-                {isRunning ? "⏳ Traduzione in corso..." : `✨ Traduci tutto in ${localeInfo.label}`}
+                {isRunning ? t("translationTabs.translatingInProgress") : t("translationTabs.translateAllIn").replace("{label}", localeInfo.label)}
               </button>
             </div>
 
@@ -316,16 +318,16 @@ export function TranslationTabs({
                       onClick={() => translateField(locale, field)}
                       disabled={isFieldTranslating || !field.sourceValue.trim()}
                       className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40"
-                      title="Traduci automaticamente"
+                      title={t("translationTabs.autoTranslate")}
                     >
-                      {isFieldTranslating ? "⏳" : "✨ Auto"}
+                      {isFieldTranslating ? "⏳" : t("translationTabs.autoLabel")}
                     </button>
                   </div>
                   {field.multiline ? (
                     <textarea
                       value={currentValue}
                       onChange={(e) => setValue(locale, field.key, e.target.value)}
-                      placeholder={field.sourceValue || "Traduzione..."}
+                      placeholder={field.sourceValue || t("translationTabs.translationPlaceholder")}
                       rows={3}
                       className="w-full px-3 py-2 border rounded-lg text-sm resize-y"
                     />

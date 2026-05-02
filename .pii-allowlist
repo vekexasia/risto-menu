@@ -43,3 +43,46 @@ test\.local
 # Italian regions used in custom-locale fixtures (not personal names).
 (?i)^veneto$
 (?i)^v[èe]neto$
+
+# ── Italian admin UI strings in messages/it.json ──
+# Verbs / labels that the PII scanner mistakes for personal names.
+(?i)^riordina$
+(?i)^salva$
+(?i)^salvataggio$
+(?i)^annulla$
+(?i)^modifica$
+(?i)^elimina$
+(?i)^rimuovi$
+(?i)^cambia$
+(?i)^conferma$
+(?i)^aggiungi$
+(?i)^crea$
+(?i)^nuova$
+(?i)^nuovo$
+(?i)^cerca$
+(?i)^filtra$
+(?i)^carica$
+(?i)^caricamento$
+(?i)^traduci$
+(?i)^traduzione$
+(?i)^traduzioni$
+(?i)^ritraduci$
+(?i)^mancanti$
+(?i)^mancano$
+(?i)^nascosti$
+(?i)^nascosta$
+(?i)^nascosto$
+(?i)^visibili$
+(?i)^esaurito$
+(?i)^congelato$
+(?i)^duplica$
+(?i)^riprendo$
+(?i)^pausa$
+(?i)^completate?$
+(?i)^completato$
+(?i)^categoria$
+(?i)^categorie$
+(?i)^piatto$
+(?i)^piatti$
+(?i)^lingua$
+(?i)^lingue$

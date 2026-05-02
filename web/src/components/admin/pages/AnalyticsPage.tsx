@@ -4,19 +4,16 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getAnalytics, type AnalyticsResponse, type ViewedItemRanked } from "@/lib/api";
+import { useTranslations } from "@/lib/i18n";
 
 type Period = "24h" | "7d" | "30d" | "all";
 
-const PERIOD_LABELS: Record<Period, string> = {
-  "24h": "24h",
-  "7d": "7gg",
-  "30d": "30gg",
-  "all": "Tutto",
-};
+const PERIOD_KEYS: Period[] = ["24h", "7d", "30d", "all"];
 
 function MovementBadge({ status, delta }: { status: ViewedItemRanked['status']; delta: number | null }) {
+  const t = useTranslations("admin");
   if (status === 'new') {
-    return <span className="text-xs text-[#cc9166] font-medium ml-1">Nuovo</span>;
+    return <span className="text-xs text-[#cc9166] font-medium ml-1">{t("analytics.movement.new")}</span>;
   }
   if (status === 'up') {
     return <span className="text-xs text-green-600 font-medium ml-1">&uarr;{delta}</span>;
@@ -28,6 +25,7 @@ function MovementBadge({ status, delta }: { status: ViewedItemRanked['status']; 
 }
 
 function DailyTrendChart({ data }: { data: { date: string; viewCount: number }[] }) {
+  const t = useTranslations("admin");
   if (data.length === 0) return null;
   const max = Math.max(...data.map((d) => d.viewCount), 1);
   const total = data.reduce((s, d) => s + d.viewCount, 0);
@@ -37,8 +35,8 @@ function DailyTrendChart({ data }: { data: { date: string; viewCount: number }[]
   return (
     <div className="mb-3">
       <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-xs font-medium text-gray-500">Andamento ({data.length}gg)</span>
-        <span className="text-xs text-gray-400">{total} vis. totali</span>
+        <span className="text-xs font-medium text-gray-500">{t("analytics.trendTitle").replace("{days}", String(data.length))}</span>
+        <span className="text-xs text-gray-400">{t("analytics.trendTotalViews").replace("{count}", String(total))}</span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-12 block">
         {data.map((d, i) => {
@@ -55,7 +53,7 @@ function DailyTrendChart({ data }: { data: { date: string; viewCount: number }[]
               fill="#cc9166"
               rx={0.4}
             >
-              <title>{`${d.date}: ${d.viewCount} vis.`}</title>
+              <title>{t("analytics.barTooltip").replace("{date}", d.date).replace("{count}", String(d.viewCount))}</title>
             </rect>
           );
         })}
@@ -92,6 +90,7 @@ function ViewedItemThumbnail({ item }: { item: ViewedItemRanked }) {
 }
 
 export default function AnalyticsPage() {
+  const t = useTranslations("admin");
   const [period, setPeriod] = useState<Period>("7d");
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,14 +111,14 @@ export default function AnalyticsPage() {
         setData(result);
       } catch {
         if (isInitial) {
-          setError("Errore caricamento. Riprova");
+          setError("loadError");
         } else {
           // Silent retry once, then show inline error
           try {
             const retry = await getAnalytics(p, lim);
             setData(retry);
           } catch {
-            setError("Errore caricamento. Riprova");
+            setError("loadError");
           }
         }
       } finally {
@@ -164,7 +163,7 @@ export default function AnalyticsPage() {
             <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse" />
           </div>
         </div>
-        <div className="text-sm text-gray-400 text-center">Caricamento...</div>
+        <div className="text-sm text-gray-400 text-center">{t("analytics.loading")}</div>
       </div>
     );
   }
@@ -174,13 +173,13 @@ export default function AnalyticsPage() {
     return (
       <div className="p-4">
         <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500">
-          {error}
+          {t("analytics.loadError")}
           <div className="mt-2">
             <button
               onClick={() => load(period, limit, true)}
               className="text-sm text-[#b07040] hover:underline"
             >
-              Riprova
+              {t("common.retry")}
             </button>
           </div>
         </div>
@@ -191,8 +190,8 @@ export default function AnalyticsPage() {
   return (
     <div className="p-4 space-y-4" style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
       {/* DATE RANGE SELECTOR */}
-      <div className="flex gap-1" role="group" aria-label="Periodo">
-        {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+      <div className="flex gap-1" role="group" aria-label={t("analytics.periodAria")}>
+        {PERIOD_KEYS.map((p) => (
           <button
             key={p}
             onClick={() => handlePeriodChange(p)}
@@ -203,7 +202,7 @@ export default function AnalyticsPage() {
             }`}
             aria-pressed={period === p}
           >
-            {PERIOD_LABELS[p]}
+            {t(`analytics.period.${p}`)}
           </button>
         ))}
       </div>
@@ -211,12 +210,12 @@ export default function AnalyticsPage() {
       {/* Error inline (after period change) */}
       {error && data && (
         <div className="text-sm text-red-500 text-center">
-          {error}{" "}
+          {t("analytics.loadError")}{" "}
           <button
             onClick={() => load(period, limit, false)}
             className="underline"
           >
-            Riprova
+            {t("common.retry")}
           </button>
         </div>
       )}
@@ -225,9 +224,9 @@ export default function AnalyticsPage() {
       <div
         className="bg-white rounded-lg shadow p-4"
         role="region"
-        aria-label="Piatti più visti"
+        aria-label={t("analytics.mostViewedAria")}
       >
-        <p className="text-sm font-semibold text-gray-900 mb-3">Piatti più visti</p>
+        <p className="text-sm font-semibold text-gray-900 mb-3">{t("analytics.mostViewed")}</p>
         {data?.dailyTotals && data.dailyTotals.length > 0 && (
           <DailyTrendChart data={data.dailyTotals} />
         )}
@@ -238,7 +237,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
         ) : !data || data.viewedItems.length === 0 ? (
-          <p className="text-sm text-gray-400">Nessun dato di visualizzazione ancora</p>
+          <p className="text-sm text-gray-400">{t("analytics.noViewsYet")}</p>
         ) : (
           <>
             <ol className="divide-y divide-gray-100">
@@ -261,7 +260,7 @@ export default function AnalyticsPage() {
                       )}
                     </div>
                   </div>
-                    <span className="text-sm text-gray-500 shrink-0 ml-2">{item.viewCount} vis.</span>
+                    <span className="text-sm text-gray-500 shrink-0 ml-2">{t("analytics.viewCount").replace("{count}", String(item.viewCount))}</span>
                   </>
                 );
 
@@ -289,12 +288,12 @@ export default function AnalyticsPage() {
                 disabled={heroLoading}
                 className="mt-3 w-full py-2 text-sm font-medium text-[#b07040] hover:bg-[#fbf3ec] rounded-lg transition-colors disabled:opacity-50"
               >
-                {heroLoading ? "Caricamento..." : "Vedi altro"}
+                {heroLoading ? t("analytics.viewMoreLoading") : t("analytics.viewMore")}
               </button>
             )}
             {period !== 'all' && (
               <p className="text-xs text-gray-400 mt-3">
-                Le visualizzazioni sono conteggi anonimi. Il movimento indica il cambio di posizione rispetto al periodo precedente.
+                {t("analytics.movementHint")}
               </p>
             )}
           </>

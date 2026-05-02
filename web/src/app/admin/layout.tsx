@@ -1,4 +1,6 @@
 import "./admin.css";
+import { I18nProvider } from "@/lib/i18n";
+import { adminLocale } from "@/lib/i18n-config";
 
 export default function AdminLayout({
   children,
@@ -14,7 +16,7 @@ export default function AdminLayout({
         crossOrigin="anonymous"
         referrerPolicy="no-referrer"
       />
-      {children}
+      <I18nProvider locale={adminLocale}>{children}</I18nProvider>
     </>
   );
 }

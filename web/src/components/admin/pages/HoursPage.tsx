@@ -4,18 +4,20 @@ import { useEffect, useState } from "react";
 import { updateOpeningHours } from "@/lib/api";
 import { useRestaurantStore } from "@/stores/restaurantStore";
 import type { TimeSlot } from "@/lib/types";
+import { useTranslations } from "@/lib/i18n";
 
-const DAYS = [
-  { key: 0, label: "Lunedì" },
-  { key: 1, label: "Martedì" },
-  { key: 2, label: "Mercoledì" },
-  { key: 3, label: "Giovedì" },
-  { key: 4, label: "Venerdì" },
-  { key: 5, label: "Sabato" },
-  { key: 6, label: "Domenica" },
+const DAY_KEYS = [
+  { key: 0, label: "monday" },
+  { key: 1, label: "tuesday" },
+  { key: 2, label: "wednesday" },
+  { key: 3, label: "thursday" },
+  { key: 4, label: "friday" },
+  { key: 5, label: "saturday" },
+  { key: 6, label: "sunday" },
 ] as const;
 
 export default function HoursPage() {
+  const t = useTranslations("admin");
   const [schedule, setSchedule] = useState<TimeSlot[][]>(
     Array(7).fill(null).map(() => [])
   );
@@ -81,11 +83,11 @@ export default function HoursPage() {
         schedule,
       });
 
-      setSuccessMessage("Orari salvati con successo!");
+      setSuccessMessage(t("hours.savedSuccess"));
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       console.error("Error saving hours:", err);
-      setError("Errore nel salvataggio degli orari");
+      setError(t("hours.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -94,7 +96,7 @@ export default function HoursPage() {
   if (loading) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#9A9590", fontSize: 13 }}>Caricamento orari...</div>
+        <div style={{ color: "#9A9590", fontSize: 13 }}>{t("hours.loading")}</div>
       </div>
     );
   }
@@ -105,12 +107,12 @@ export default function HoursPage() {
       {/* Page header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#A15E35", textTransform: "uppercase", letterSpacing: 0.6, display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-          <span>Menu</span>
+          <span>{t("hours.breadcrumbMenu")}</span>
           <span style={{ opacity: 0.4 }}>›</span>
-          <span style={{ color: "#888" }}>Orari</span>
+          <span style={{ color: "#888" }}>{t("hours.breadcrumbHours")}</span>
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1F1A14", margin: 0 }}>
-          Orari di Apertura
+          {t("hours.title")}
         </h1>
       </div>
 
@@ -130,18 +132,18 @@ export default function HoursPage() {
 
       {/* Days schedule */}
       <div className="bg-white rounded-lg shadow-sm divide-y">
-        {DAYS.map((day) => {
+        {DAY_KEYS.map((day) => {
           const daySlots = schedule[day.key] || [];
           const isClosed = daySlots.length === 0;
 
           return (
             <div key={day.key} className="p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-gray-900">{day.label}</span>
+                <span className="font-medium text-gray-900">{t(`hours.weekday.${day.label}`)}</span>
                 {isClosed ? (
-                  <span className="text-sm text-red-500 font-medium">Chiuso</span>
+                  <span className="text-sm text-red-500 font-medium">{t("hours.dayClosed")}</span>
                 ) : (
-                  <span className="text-sm text-green-600 font-medium">Aperto</span>
+                  <span className="text-sm text-green-600 font-medium">{t("hours.dayOpen")}</span>
                 )}
               </div>
 
@@ -165,7 +167,7 @@ export default function HoursPage() {
                     <button
                       onClick={() => removeSlot(day.key, slotIndex)}
                       className="p-1 text-red-500 hover:bg-red-50 rounded"
-                      title="Rimuovi fascia oraria"
+                      title={t("hours.removeSlot")}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -204,7 +206,7 @@ export default function HoursPage() {
                       d="M12 4.5v15m7.5-7.5h-15"
                     />
                   </svg>
-                  Aggiungi fascia oraria
+                  {t("hours.addSlot")}
                 </button>
               </div>
             </div>
@@ -218,7 +220,7 @@ export default function HoursPage() {
         disabled={saving}
         className="w-full py-3 bg-primary text-white rounded-lg font-medium disabled:opacity-50"
       >
-        {saving ? "Salvataggio..." : "Salva modifiche"}
+        {saving ? t("common.saving") : t("common.saveChanges")}
       </button>
     </div>
   );

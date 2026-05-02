@@ -9,6 +9,7 @@ import { TranslationTabs } from "@/components/admin/TranslationTabs";
 import { Flag } from "@/components/ui/Flag";
 import { useRestaurantStore } from "@/stores/restaurantStore";
 import { locales } from "@/lib/i18n-config";
+import { useTranslations } from "@/lib/i18n";
 
 // ── Design tokens (mirrors admin.css) ────────────────────────────
 const T = {
@@ -125,15 +126,15 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 
 export type SettingsSection = "profile" | "languages" | "communications" | "chat-ai" | "publishing";
 
-const SECTION_TITLES: Record<SettingsSection, string> = {
-  profile: "Profilo",
-  languages: "Lingue",
-  communications: "Comunicazioni",
-  "chat-ai": "Chat AI",
-  publishing: "Pubblicazione",
-};
-
 export default function SettingsPage({ section }: { section?: SettingsSection } = {}) {
+  const t = useTranslations("admin");
+  const SECTION_TITLES: Record<SettingsSection, string> = {
+    profile: t("settings.section.profile"),
+    languages: t("settings.section.languages"),
+    communications: t("settings.section.communications"),
+    "chat-ai": t("settings.section.chatAi"),
+    publishing: t("settings.section.publishing"),
+  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -237,12 +238,13 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
         setLoading(false);
       } catch (err) {
         console.error("Error loading settings:", err);
-        setError("Errore nel caricamento dei dati");
+        setError(t("settings.loadFailed"));
         setLoading(false);
       }
     }
 
     loadPrivateSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async () => {
@@ -286,11 +288,11 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
       await updateRestaurantSettings(payload);
       await loadRestaurant({ force: true });
 
-      setSuccess("Salvato con successo!");
+      setSuccess(t("settings.saved"));
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Error saving:", err);
-      setError("Errore nel salvataggio");
+      setError(t("settings.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -305,11 +307,11 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
       const imageUrl = await uploadHeaderImage(file);
       setHeaderImage(imageUrl);
       await loadRestaurant({ force: true });
-      setSuccess("Immagine header aggiornata!");
+      setSuccess(t("settings.headerImageUpdated"));
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error(err);
-      setError("Errore nel caricamento dell'immagine");
+      setError(t("settings.imageUploadFailed"));
     } finally {
       setUploadingHeader(false);
       if (headerInputRef.current) headerInputRef.current.value = "";
@@ -324,11 +326,11 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
     try {
       const imageUrl = await uploadPromotionalImage(file);
       setPromoUrl(`${imageUrl}?t=${Date.now()}`);
-      setSuccess("Immagine promozionale aggiornata!");
+      setSuccess(t("settings.promoImageUpdated"));
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error(err);
-      setError("Errore nel caricamento dell'immagine");
+      setError(t("settings.imageUploadFailed"));
     } finally {
       setUploadingPromo(false);
       if (promoInputRef.current) promoInputRef.current.value = "";
@@ -342,11 +344,11 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
       const next = !published;
       await setMenuPublished(next);
       setPublished(next);
-      setSuccess(next ? "Menu pubblicato!" : "Menu nascosto.");
+      setSuccess(next ? t("settings.menuPublished") : t("settings.menuHidden"));
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error(err);
-      setError("Errore nella pubblicazione");
+      setError(t("settings.publishFailed"));
     } finally {
       setPublishing(false);
     }
@@ -357,7 +359,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
   if (loading) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: T.off, fontSize: 13 }}>Caricamento impostazioni...</div>
+        <div style={{ color: T.off, fontSize: 13 }}>{t("settings.loading")}</div>
       </div>
     );
   }
@@ -369,7 +371,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
         {/* Page header */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: T.accentDeep, textTransform: "uppercase", letterSpacing: 0.6, display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-            <span>Impostazioni</span>
+            <span>{t("settings.breadcrumb")}</span>
             {section && (
               <>
                 <span style={{ opacity: 0.4 }}>›</span>
@@ -378,7 +380,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
             )}
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: T.dark, margin: 0 }}>
-            {section ? SECTION_TITLES[section] : "Impostazioni Ristorante"}
+            {section ? SECTION_TITLES[section] : t("settings.title")}
           </h1>
         </div>
 
@@ -403,17 +405,17 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
             <div>
               {show("profile") && <>
               {/* ── Informazioni Base ── */}
-              <Card title="Informazioni Base">
-                <Field label="Nome Ristorante">
+              <Card title={t("settings.cards.basicInfo")}>
+                <Field label={t("settings.field.restaurantName")}>
                   <input className="adm-input" style={inputStyle} type="text" value={name} onChange={(e) => setName(e.target.value)} />
                 </Field>
-                <Field label="Payoff / Slogan">
-                  <input className="adm-input" style={inputStyle} type="text" value={payoff} onChange={(e) => setPayoff(e.target.value)} placeholder="es. La tradizione del gusto" />
+                <Field label={t("settings.field.payoff")}>
+                  <input className="adm-input" style={inputStyle} type="text" value={payoff} onChange={(e) => setPayoff(e.target.value)} placeholder={t("settings.field.payoffPlaceholder")} />
                 </Field>
               </Card>
 
               {/* ── Immagine Header ── */}
-              <Card title="Immagine Header">
+              <Card title={t("settings.cards.headerImage")}>
                 {headerImage ? (
                   <div style={{ position: "relative", width: "100%", aspectRatio: "16/7", borderRadius: 6, overflow: "hidden", background: T.border }}>
                     <Image src={headerImage} alt="Header" fill style={{ objectFit: "cover" }} unoptimized />
@@ -422,13 +424,13 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                       onClick={() => headerInputRef.current?.click()}
                       disabled={uploadingHeader}
                       style={{ position: "absolute", bottom: 8, right: 8, background: "#fff", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }}
-                      title="Cambia immagine"
+                      title={t("settings.headerImage.changeImage")}
                     >
                       <i className="fa-solid fa-pen" style={{ fontSize: 12, color: T.text }} />
                     </button>
                     {uploadingHeader && (
                       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ color: "#fff", fontSize: 13 }}>Caricamento...</span>
+                        <span style={{ color: "#fff", fontSize: 13 }}>{t("settings.headerImage.uploading")}</span>
                       </div>
                     )}
                   </div>
@@ -440,31 +442,31 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                     style={{ width: "100%", aspectRatio: "16/7", borderRadius: 6, border: `2px dashed ${T.border}`, background: T.surface, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", color: T.off, fontSize: 13 }}
                   >
                     <i className="fa-solid fa-image" style={{ fontSize: 24, opacity: 0.4 }} />
-                    <span>{uploadingHeader ? "Caricamento..." : "Clicca per caricare un'immagine"}</span>
+                    <span>{uploadingHeader ? t("settings.headerImage.uploading") : t("settings.headerImage.uploadCta")}</span>
                   </button>
                 )}
                 <input ref={headerInputRef} type="file" accept="image/*" onChange={handleHeaderImageChange} style={{ display: "none" }} />
               </Card>
 
               {/* ── Contatti e Indirizzo ── */}
-              <Card title="Contatti e Indirizzo">
-                <Field label="Telefono">
+              <Card title={t("settings.cards.contactAddress")}>
+                <Field label={t("settings.field.phone")}>
                   <input className="adm-input" style={inputStyle} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+39 0421 123456" />
                 </Field>
-                <Field label="Indirizzo">
+                <Field label={t("settings.field.address")}>
                   <input className="adm-input" style={inputStyle} type="text" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="Via Roma, 1" />
                 </Field>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px", gap: 10, marginBottom: 14 }}>
                   <div>
-                    <label style={labelStyle}>Città</label>
+                    <label style={labelStyle}>{t("settings.field.city")}</label>
                     <input className="adm-input" style={inputStyle} type="text" value={city} onChange={(e) => setCity(e.target.value)} />
                   </div>
                   <div>
-                    <label style={labelStyle}>CAP</label>
+                    <label style={labelStyle}>{t("settings.field.zip")}</label>
                     <input className="adm-input" style={inputStyle} type="text" value={zip} onChange={(e) => setZip(e.target.value)} />
                   </div>
                   <div>
-                    <label style={labelStyle}>Regione</label>
+                    <label style={labelStyle}>{t("settings.field.region")}</label>
                     <input className="adm-input" style={inputStyle} type="text" value={region} onChange={(e) => setRegion(e.target.value)} />
                   </div>
                 </div>
@@ -474,32 +476,32 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
 
               {show("communications") && <>
               {/* ── Avviso Menu ── */}
-              <Card title="Avviso Menu">
+              <Card title={t("settings.cards.menuNotice")}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "10px 12px", background: T.surface, borderRadius: 6, border: `1px solid ${T.border}` }}>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: T.dark, margin: 0 }}>Mostra popup iniziale</p>
-                    <p style={{ fontSize: 11, color: T.off, margin: "2px 0 0" }}>Avviso allergeni/surgelati mostrato quando il cliente apre il menu.</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: T.dark, margin: 0 }}>{t("settings.menuNotice.showInitialPopup")}</p>
+                    <p style={{ fontSize: 11, color: T.off, margin: "2px 0 0" }}>{t("settings.menuNotice.popupDesc")}</p>
                   </div>
                   <Toggle on={menuNoticeEnabled} onChange={() => setMenuNoticeEnabled((v) => !v)} />
                 </div>
                 <TranslationTabs
                   activeTab={menuNoticeTab}
                   onTabChange={setMenuNoticeTab}
-                  fields={[{ key: "text", label: "Testo avviso", multiline: true, sourceValue: menuNoticeText }]}
+                  fields={[{ key: "text", label: t("settings.menuNotice.fieldText"), multiline: true, sourceValue: menuNoticeText }]}
                   i18n={menuNoticeI18n}
                   onI18nChange={setMenuNoticeI18n}
                   enabledLocales={enabledLocales}
                   disabledLocales={disabledLocales}
                   customLocales={customLocales}
                 >
-                  <Field label="Testo italiano">
+                  <Field label={t("settings.menuNotice.italianText")}>
                     <textarea
                       className="adm-textarea"
                       style={{ ...textareaStyle, minHeight: 120 }}
                       value={menuNoticeText}
                       onChange={(e) => setMenuNoticeText(e.target.value)}
                       rows={6}
-                      placeholder="Testo mostrato nel popup..."
+                      placeholder={t("settings.menuNotice.placeholder")}
                     />
                   </Field>
                 </TranslationTabs>
@@ -509,14 +511,14 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
 
               {show("profile") && <>
               {/* ── Social Media ── */}
-              <Card title="Social Media">
-                <Field label="Facebook (URL)">
+              <Card title={t("settings.cards.socialMedia")}>
+                <Field label={t("settings.field.facebookUrl")}>
                   <input className="adm-input" style={inputStyle} type="url" value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="https://facebook.com/..." />
                 </Field>
-                <Field label="Instagram (URL)">
+                <Field label={t("settings.field.instagramUrl")}>
                   <input className="adm-input" style={inputStyle} type="url" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/..." />
                 </Field>
-                <Field label="WhatsApp (numero con prefisso internazionale)">
+                <Field label={t("settings.field.whatsapp")}>
                   <input className="adm-input" style={inputStyle} type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="393331234567" />
                 </Field>
               </Card>
@@ -527,22 +529,22 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
             <div>
               {show("communications") && <>
               {/* ── Promozione / Alert ── */}
-              <Card title="Promozione / Alert">
+              <Card title={t("settings.cards.promotion")}>
                 <p style={{ fontSize: 12, color: T.muted, marginBottom: 14 }}>
-                  Questa promozione viene mostrata come popup all&apos;apertura dell&apos;app.
+                  {t("settings.promo.intro")}
                 </p>
-                <Field label="Titolo">
-                  <input className="adm-input" style={inputStyle} type="text" value={promoTitle} onChange={(e) => setPromoTitle(e.target.value)} placeholder="Offerta speciale!" />
+                <Field label={t("settings.promo.titleField")}>
+                  <input className="adm-input" style={inputStyle} type="text" value={promoTitle} onChange={(e) => setPromoTitle(e.target.value)} placeholder={t("settings.promo.titlePlaceholder")} />
                 </Field>
-                <Field label="Contenuto">
-                  <textarea className="adm-textarea" style={{ ...textareaStyle, minHeight: 72 }} value={promoContent} onChange={(e) => setPromoContent(e.target.value)} rows={3} placeholder="Descrizione della promozione..." />
+                <Field label={t("settings.promo.contentField")}>
+                  <textarea className="adm-textarea" style={{ ...textareaStyle, minHeight: 72 }} value={promoContent} onChange={(e) => setPromoContent(e.target.value)} rows={3} placeholder={t("settings.promo.contentPlaceholder")} />
                 </Field>
-                <Field label="Data scadenza">
+                <Field label={t("settings.promo.expiryField")}>
                   <input className="adm-input" style={inputStyle} type="date" value={promoTillDate} onChange={(e) => setPromoTillDate(e.target.value)} />
-                  <p style={{ fontSize: 11, color: T.off, marginTop: 4 }}>La promozione non sarà più visibile dopo questa data</p>
+                  <p style={{ fontSize: 11, color: T.off, marginTop: 4 }}>{t("settings.promo.expiryHint")}</p>
                 </Field>
                 <div>
-                  <label style={labelStyle}>Immagine Promozionale</label>
+                  <label style={labelStyle}>{t("settings.promo.imageLabel")}</label>
                   {promoUrl ? (
                     <div style={{ position: "relative", width: "100%", aspectRatio: "16/7", borderRadius: 6, overflow: "hidden", background: T.border }}>
                       <Image src={promoUrl} alt="Promo" fill style={{ objectFit: "cover" }} unoptimized />
@@ -556,7 +558,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                       </button>
                       {uploadingPromo && (
                         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ color: "#fff", fontSize: 13 }}>Caricamento...</span>
+                          <span style={{ color: "#fff", fontSize: 13 }}>{t("settings.headerImage.uploading")}</span>
                         </div>
                       )}
                     </div>
@@ -568,7 +570,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                       style={{ width: "100%", aspectRatio: "16/7", borderRadius: 6, border: `2px dashed ${T.border}`, background: T.surface, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", color: T.off, fontSize: 13 }}
                     >
                       <i className="fa-solid fa-image" style={{ fontSize: 24, opacity: 0.4 }} />
-                      <span>{uploadingPromo ? "Caricamento..." : "Clicca per caricare un'immagine"}</span>
+                      <span>{uploadingPromo ? t("settings.headerImage.uploading") : t("settings.headerImage.uploadCta")}</span>
                     </button>
                   )}
                   <input ref={promoInputRef} type="file" accept="image/*" onChange={handlePromoImageChange} style={{ display: "none" }} />
@@ -579,13 +581,13 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
 
               {show("languages") && (
               /* ── Lingue ── */
-              <Card title="Lingue">
+              <Card title={t("settings.cards.languages")}>
                 <p style={{ fontSize: 12, color: T.muted, marginBottom: 14 }}>
-                  L&apos;italiano è sempre attivo. Abilita le lingue standard o aggiungi lingue personalizzate (es. dialetti regionali).
+                  {t("settings.languages.intro")}
                 </p>
 
                 {/* Standard locales */}
-                <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Standard</p>
+                <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{t("settings.languages.standard")}</p>
                 {STANDARD_NON_IT.map((locale) => {
                   const LABEL: Record<string, string> = { en: "English", de: "Deutsch", fr: "Français", es: "Español", nl: "Nederlands", ru: "Русский", pt: "Português" };
                   const CODE: Record<string, string> = { en: "EN", de: "DE", fr: "FR", es: "ES", nl: "NL", ru: "RU", pt: "PT" };
@@ -619,7 +621,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                               color: state === s ? "#fff" : "#6B7280",
                             }}
                           >
-                            {s === "off" ? "Off" : s === "hidden" ? "Hidden" : "Live"}
+                            {s === "off" ? t("settings.languages.state.off") : s === "hidden" ? t("settings.languages.state.hidden") : t("settings.languages.state.live")}
                           </button>
                         ))}
                       </div>
@@ -628,9 +630,9 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                 })}
 
                 {/* Custom locales */}
-                <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, margin: "16px 0 6px" }}>Personalizzate</p>
+                <p style={{ fontSize: 10, fontWeight: 700, color: T.off, textTransform: "uppercase", letterSpacing: 0.5, margin: "16px 0 6px" }}>{t("settings.languages.custom")}</p>
                 {customLocales.length === 0 && (
-                  <p style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>Nessuna lingua personalizzata. Aggiungine una qui sotto.</p>
+                  <p style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>{t("settings.languages.noCustom")}</p>
                 )}
                 {customLocales.map((cl) => {
                   const state: "off" | "hidden" | "live" = disabledLocales.includes(cl.code) ? "off" : enabledLocales.includes(cl.code) ? "live" : "hidden";
@@ -685,7 +687,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                             onClick={() => flagInputRefs.current[cl.code]?.click()}
                             style={{ fontSize: 11, color: T.accentDeep, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", opacity: uploadingFlagFor === cl.code ? 0.5 : 1 }}
                           >
-                            {uploadingFlagFor === cl.code ? "Caricamento…" : (cl.flagUrl ? "Cambia bandiera" : "Carica bandiera")}
+                            {uploadingFlagFor === cl.code ? t("settings.languages.uploading") : (cl.flagUrl ? t("settings.languages.changeFlag") : t("settings.languages.uploadFlag"))}
                           </button>
                           {cl.flagUrl && (
                             <button
@@ -694,18 +696,18 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                               onClick={onFlagRemove}
                               style={{ fontSize: 11, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: 0 }}
                             >
-                              Rimuovi bandiera
+                              {t("settings.languages.removeFlag")}
                             </button>
                           )}
                           <button type="button" onClick={() => setEditingLocale(isEditing ? null : { ...cl })} style={{ fontSize: 11, color: T.accentDeep, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-                            {isEditing ? "Annulla" : "Modifica"}
+                            {isEditing ? t("settings.languages.cancelButton") : t("settings.languages.editButton")}
                           </button>
                           <button type="button" onClick={() => {
                             setCustomLocales(customLocales.filter((l) => l.code !== cl.code));
                             setEnabledLocales(enabledLocales.filter((l) => l !== cl.code));
                             setDisabledLocales(disabledLocales.filter((l) => l !== cl.code));
                           }} style={{ fontSize: 11, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                            Rimuovi
+                            {t("settings.languages.removeButton")}
                           </button>
                           <div style={{ display: "flex", gap: 4 }}>
                             {(["off", "hidden", "live"] as const).map((s) => (
@@ -725,7 +727,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                                   color: state === s ? "#fff" : "#6B7280",
                                 }}
                               >
-                                {s === "off" ? "Off" : s === "hidden" ? "Hidden" : "Live"}
+                                {s === "off" ? t("settings.languages.state.off") : s === "hidden" ? t("settings.languages.state.hidden") : t("settings.languages.state.live")}
                               </button>
                             ))}
                           </div>
@@ -756,7 +758,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                             setDisabledLocales(disabledLocales.map((l) => l === cl.code ? editingLocale.code : l));
                             setEditingLocale(null);
                           }} style={{ padding: "0 12px", height: 36, background: T.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                            Salva
+                            {t("settings.languages.saveButton")}
                           </button>
                         </div>
                       )}
@@ -791,7 +793,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                     setNewLocaleCode("");
                     setNewLocaleName("");
                   }} disabled={!newLocaleCode.trim() || !newLocaleName.trim()} style={{ padding: "0 12px", height: 36, background: T.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, opacity: !newLocaleCode.trim() || !newLocaleName.trim() ? 0.5 : 1 }}>
-                    + Aggiungi
+                    {t("settings.languages.addButton")}
                   </button>
                 </div>
               </Card>
@@ -800,28 +802,28 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
 
               {show("chat-ai") && (
               /* ── Chat Agent ── */
-              <Card title="Chat Agent">
+              <Card title={t("settings.cards.chatAgent")}>
                 <p style={{ fontSize: 12, color: T.muted, marginBottom: 14 }}>
-                  Istruzioni personalizzate per l&apos;assistente chat del menu. Verranno usate dall&apos;AI per consigliare i piatti ai clienti.
+                  {t("settings.chat.intro")}
                 </p>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, padding: "10px 12px", background: T.surface, borderRadius: 6, border: `1px solid ${T.border}` }}>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: T.dark, margin: 0 }}>Abilita chat AI</p>
-                    <p style={{ fontSize: 11, color: T.off, margin: "2px 0 0" }}>Mostra il pulsante chat ai clienti sul menu</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: T.dark, margin: 0 }}>{t("settings.chat.enable")}</p>
+                    <p style={{ fontSize: 11, color: T.off, margin: "2px 0 0" }}>{t("settings.chat.enableDesc")}</p>
                   </div>
                   <Toggle on={aiChatEnabled} onChange={() => setAiChatEnabled((v) => !v)} />
                 </div>
-                <Field label="Prompt Personalizzato">
+                <Field label={t("settings.chat.promptLabel")}>
                   <textarea
                     className="adm-textarea"
                     style={{ ...textareaStyle, minHeight: 120 }}
                     value={chatAgentPrompt}
                     onChange={(e) => setChatAgentPrompt(e.target.value)}
                     rows={6}
-                    placeholder="es. Stasera consiglia il menu degustazione di pesce. Abbiamo ricevuto ostriche fresche, consiglialo a chi chiede di pesce."
+                    placeholder={t("settings.chat.promptPlaceholder")}
                   />
                   <p style={{ fontSize: 11, color: T.off, marginTop: 4 }}>
-                    Queste istruzioni vengono aggiunte al prompt base dell&apos;assistente. Aggiornamento entro 1 ora.
+                    {t("settings.chat.promptHint")}
                   </p>
                 </Field>
               </Card>
@@ -830,19 +832,19 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
 
               {show("publishing") && <>
               {/* ── Visibilità Menu ── */}
-              <Card title="Visibilità Menu">
+              <Card title={t("settings.cards.menuVisibility")}>
                 {published === false && (
                   <div style={{ background: T.warnBg, border: `1px solid ${T.warnBorder}`, borderRadius: 6, padding: "10px 14px", color: T.warn, fontSize: 12, marginBottom: 14 }}>
-                    Il tuo menu non è ancora pubblico — pubblica per attivare il QR code.
+                    {t("settings.publishing.notPublicWarning")}
                   </div>
                 )}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 600, color: T.dark, margin: 0 }}>
-                      {published ? "Menu pubblico" : "Menu non pubblico"}
+                      {published ? t("settings.publishing.menuPublic") : t("settings.publishing.menuNotPublic")}
                     </p>
                     <p style={{ fontSize: 11, color: T.off, margin: "2px 0 0" }}>
-                      {published ? "I clienti possono vedere il menu tramite QR code." : "Il menu non è visibile ai clienti."}
+                      {published ? t("settings.publishing.publicDesc") : t("settings.publishing.notPublicDesc")}
                     </p>
                   </div>
                   <button
@@ -850,7 +852,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                     disabled={publishing}
                     style={{ padding: "7px 14px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", background: published ? T.offBg : T.accent, color: published ? T.text : "#fff", opacity: publishing ? 0.5 : 1 }}
                   >
-                    {publishing ? "In corso..." : published ? "Nascondi menu" : "Pubblica menu"}
+                    {publishing ? t("settings.publishing.working") : published ? t("settings.publishing.hideMenu") : t("settings.publishing.publishMenu")}
                   </button>
                 </div>
               </Card>
@@ -880,7 +882,7 @@ export default function SettingsPage({ section }: { section?: SettingsSection } 
                 opacity: saving ? 0.6 : 1,
               }}
             >
-              {saving ? "Salvataggio..." : "Salva Modifiche"}
+              {saving ? t("settings.savingAll") : t("settings.saveAll")}
             </button>
           </div>
 

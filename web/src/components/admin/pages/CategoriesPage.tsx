@@ -7,6 +7,7 @@ import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { SortableList } from "@/components/admin/SortableList";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
 import { locales } from "@/lib/i18n-config";
+import { useTranslations } from "@/lib/i18n";
 
 interface I18nData {
   [locale: string]: { name?: string };
@@ -25,7 +26,10 @@ const STANDARD_TRANSLATION_LOCALES = ["en", "de", "fr", "es", "nl", "ru", "pt"];
 const TRANSLATE_THROTTLE_MS = 2200;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+type CategoryFilter = "all" | "visible" | "featured" | "incomplete";
+
 export default function CategoriesPage() {
+  const t = useTranslations("admin");
   const { isLoading, error: storeError, loadRestaurant } = useRestaurantStore();
   const storeCategories = useCategories();
   const { data } = useRestaurantStore();
@@ -56,7 +60,7 @@ export default function CategoriesPage() {
 
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [activeFilter, setActiveFilter] = useState("Tutte");
+  const [activeFilter, setActiveFilter] = useState<CategoryFilter>("all");
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState("");
   const [editI18n, setEditI18n] = useState<I18nData>({});
@@ -88,7 +92,7 @@ export default function CategoriesPage() {
 
   const filteredCategories = categories.filter((c) => {
     if (query && !c.name.toLowerCase().includes(query.toLowerCase())) return false;
-    if (activeFilter === "Incomplete") {
+    if (activeFilter === "incomplete") {
       const titleMissing = configuredLocales.some((l) => !c.i18n?.[l]?.name);
       if (!titleMissing && c.entriesWithMissingTranslations === 0) return false;
     }
@@ -145,7 +149,7 @@ export default function CategoriesPage() {
       setEditingCategory(null);
     } catch (err) {
       console.error("Error saving category:", err);
-      setSaveError("Errore nel salvataggio");
+      setSaveError(t("categories.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -156,8 +160,8 @@ export default function CategoriesPage() {
     e?.stopPropagation();
 
     const message = category.entryCount > 0
-      ? `Eliminare la categoria "${category.name}" e i suoi ${category.entryCount} piatti? L'operazione non può essere annullata.`
-      : `Eliminare la categoria "${category.name}"?`;
+      ? t("categories.confirmDeleteWithEntries").replace("{name}", category.name).replace("{count}", String(category.entryCount))
+      : t("categories.confirmDelete").replace("{name}", category.name);
     if (!window.confirm(message)) return;
 
     setDeletingCategoryId(category.id);
@@ -172,7 +176,7 @@ export default function CategoriesPage() {
       await loadRestaurant();
     } catch (err) {
       console.error("Error deleting category:", err);
-      window.alert("Errore nell'eliminazione della categoria");
+      window.alert(t("categories.deleteFailed"));
     } finally {
       setDeletingCategoryId(null);
     }
@@ -201,13 +205,13 @@ export default function CategoriesPage() {
     }
 
     if (workItems.length === 0) {
-      setBulkProgress({ done: 0, total: 0, success: 0, failed: 0, current: "Tutte le traduzioni sono già complete." });
+      setBulkProgress({ done: 0, total: 0, success: 0, failed: 0, current: t("categories.bulk.allComplete") });
       setTimeout(() => setBulkProgress(null), 3000);
       return;
     }
 
     setBulkTranslating(true);
-    setBulkProgress({ done: 0, total: workItems.length, success: 0, failed: 0, current: "Preparazione..." });
+    setBulkProgress({ done: 0, total: workItems.length, success: 0, failed: 0, current: t("categories.bulk.preparing") });
 
     const i18nByCategory: Record<string, I18nData> = {};
     for (const cat of categories) {
@@ -234,13 +238,13 @@ export default function CategoriesPage() {
       } catch (err) {
         failed++;
         if (err instanceof ApiError && err.status === 429) {
-          setBulkProgress({ done, total: workItems.length, success, failed, current, status: "Pausa automatica, riprendo tra poco..." });
+          setBulkProgress({ done, total: workItems.length, success, failed, current, status: t("categories.bulk.autoPause") });
           await sleep(60_000);
         }
       }
       done++;
       const hasMore = done < workItems.length;
-      setBulkProgress({ done, total: workItems.length, success, failed, current, status: hasMore ? "Translation in progress..." : undefined });
+      setBulkProgress({ done, total: workItems.length, success, failed, current, status: hasMore ? t("categories.bulk.translationInProgress") : undefined });
       if (hasMore) await sleep(TRANSLATE_THROTTLE_MS);
     }
 
@@ -260,7 +264,7 @@ export default function CategoriesPage() {
     await loadRestaurant();
 
     setBulkTranslating(false);
-    setBulkProgress((prev) => prev ? { ...prev, status: undefined, current: "Completato." } : null);
+    setBulkProgress((prev) => prev ? { ...prev, status: undefined, current: t("categories.bulk.completed") } : null);
     setTimeout(() => setBulkProgress(null), 4000);
   };
 
@@ -297,7 +301,7 @@ export default function CategoriesPage() {
   if (loading) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#9A9590", fontSize: 13 }}>Caricamento categorie...</div>
+        <div style={{ color: "#9A9590", fontSize: 13 }}>{t("categories.loading")}</div>
       </div>
     );
   }
@@ -313,29 +317,34 @@ export default function CategoriesPage() {
   }
 
   const allChecked = selected.size === filteredCategories.length && filteredCategories.length > 0;
-  const filters = ["Tutte", "Visibili", "In evidenza", "Incomplete"];
+  const filters: { value: CategoryFilter; label: string }[] = [
+    { value: "all", label: t("categories.filter.all") },
+    { value: "visible", label: t("categories.filter.visible") },
+    { value: "featured", label: t("categories.filter.featured") },
+    { value: "incomplete", label: t("categories.filter.incomplete") },
+  ];
 
   return (
     <div style={{ flex: 1, display: "flex", minWidth: 0, overflow: "hidden" }}>
 
       {/* ── Main content ── */}
-      <main className="adm-scroll" style={{ flex: 1, minWidth: 0, padding: "20px 24px", overflow: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+      <main className="adm-scroll" style={{ flex: 1, minWidth: 0, padding: "20px 24px", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {/* Page header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#A15E35", textTransform: "uppercase", letterSpacing: 0.6, display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-              <span>Menu</span>
+              <span>{t("layout.nav.menu")}</span>
               <span style={{ opacity: 0.4 }}>›</span>
-              <span style={{ color: "#888" }}>Categories</span>
+              <span style={{ color: "#888" }}>{t("categories.breadcrumb")}</span>
             </div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1F1A14", margin: 0, marginBottom: 5 }}>
-              Menu categories
+              {t("categories.title")}
             </h1>
             <div style={{ fontSize: 12, color: "#888", display: "flex", gap: 6, alignItems: "center" }}>
-              <span>{filteredCategories.length} categories</span>
+              <span>{t("categories.countCategories").replace("{count}", String(filteredCategories.length))}</span>
               <span style={{ color: "#D4CFC9" }}>·</span>
-              <span>{filteredCategories.reduce((s, c) => s + c.entryCount, 0)} items total</span>
+              <span>{t("categories.countItemsTotal").replace("{count}", String(filteredCategories.reduce((s, c) => s + c.entryCount, 0)))}</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -343,7 +352,7 @@ export default function CategoriesPage() {
               onClick={openCreateModal}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#C47A4F", color: "#fff", border: "none", borderRadius: 6, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >
-              <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> New category
+              <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> {t("categories.newCategory")}
             </button>
           </div>
         </div>
@@ -355,7 +364,7 @@ export default function CategoriesPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search category, item..."
+              placeholder={t("categories.searchPlaceholder")}
               className="adm-input"
               style={{ width: "100%", height: 36, borderRadius: 6, border: "1px solid #E7E5E4", padding: "0 44px 0 36px", fontSize: 13, background: "#fff", fontFamily: "inherit", color: "#424242", boxSizing: "border-box" }}
             />
@@ -363,22 +372,22 @@ export default function CategoriesPage() {
           </div>
           {filters.map((f) => (
             <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
+              key={f.value}
+              onClick={() => setActiveFilter(f.value)}
               style={{
                 height: 28,
                 padding: "0 12px",
                 borderRadius: 14,
                 border: "1px solid #E7E5E4",
-                background: activeFilter === f ? "#1F1A14" : "#fff",
-                color: activeFilter === f ? "#fff" : "#666",
-                borderColor: activeFilter === f ? "#1F1A14" : "#E7E5E4",
+                background: activeFilter === f.value ? "#1F1A14" : "#fff",
+                color: activeFilter === f.value ? "#fff" : "#666",
+                borderColor: activeFilter === f.value ? "#1F1A14" : "#E7E5E4",
                 fontSize: 12,
                 cursor: "pointer",
                 fontFamily: "inherit",
               }}
             >
-              {f}
+              {f.label}
             </button>
           ))}
         </div>
@@ -391,11 +400,11 @@ export default function CategoriesPage() {
                 <i className="fa-solid fa-language" style={{ fontSize: 13 }} />
               </span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1F1A14" }}>Automatic translations</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1F1A14" }}>{t("categories.bulk.title")}</div>
                 <div style={{ fontSize: 11.5, color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {bulkTranslating
-                    ? bulkProgress?.current ?? "Translation in progress..."
-                    : "Fill or update category names"}
+                    ? bulkProgress?.current ?? t("categories.bulk.translationInProgress")
+                    : t("categories.bulk.fillOrUpdate")}
                 </div>
               </div>
             </div>
@@ -411,19 +420,19 @@ export default function CategoriesPage() {
                 disabled={bulkTranslating}
                 style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, background: "#2563EB", color: "#fff", border: "none", borderRadius: 999, cursor: bulkTranslating ? "not-allowed" : "pointer", opacity: bulkTranslating ? 0.5 : 1 }}
               >
-                Missing
+                {t("categories.bulk.missing")}
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm("Retranslate everything? This will overwrite existing translations.")) {
+                  if (window.confirm(t("categories.bulk.retranslateConfirm"))) {
                     handleBulkTranslateCategoryNames(true);
                   }
                 }}
                 disabled={bulkTranslating}
                 style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, background: "#F0EEEA", color: "#424242", border: "none", borderRadius: 999, cursor: bulkTranslating ? "not-allowed" : "pointer", opacity: bulkTranslating ? 0.5 : 1 }}
               >
-                Retranslate
+                {t("categories.bulk.retranslate")}
               </button>
             </div>
           </div>
@@ -459,8 +468,8 @@ export default function CategoriesPage() {
               />
             </div>
             <div style={{ width: 16 }} />
-            <div style={{ flex: 2, minWidth: 0 }}>Category</div>
-            <div style={{ width: 70, textAlign: "right" }}>Items</div>
+            <div style={{ flex: 2, minWidth: 0 }}>{t("categories.table.category")}</div>
+            <div style={{ width: 70, textAlign: "right" }}>{t("categories.table.items")}</div>
             <div style={{ width: 28 }} />
             <div style={{ width: 92 }} />
           </div>
@@ -469,7 +478,7 @@ export default function CategoriesPage() {
           <div>
             {filteredCategories.length === 0 ? (
               <div style={{ padding: "32px 14px", textAlign: "center", color: "#9A9590", fontSize: 13 }}>
-                No categories found
+                {t("categories.table.empty")}
               </div>
             ) : (
               <SortableList
@@ -510,7 +519,7 @@ export default function CategoriesPage() {
 
                     {/* Name */}
                     <div style={{ flex: 2, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1F1A14", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1F1A14", wordBreak: "break-word", lineHeight: 1.3 }}>
                         {category.name}
                       </div>
                     </div>
@@ -528,10 +537,10 @@ export default function CategoriesPage() {
                         if (missingTitleLocales.length === 0 && dishMissing === 0) return null;
                         const lines: string[] = [];
                         if (missingTitleLocales.length > 0) {
-                          lines.push(`Title: missing ${missingTitleLocales.map((l) => l.toUpperCase()).join(", ")}`);
+                          lines.push(t("categories.row.titleMissing").replace("{locales}", missingTitleLocales.map((l) => l.toUpperCase()).join(", ")));
                         }
                         if (dishMissing > 0) {
-                          lines.push(`${dishMissing} item${dishMissing === 1 ? "" : "s"} missing translations`);
+                          lines.push((dishMissing === 1 ? t("categories.row.itemMissing") : t("categories.row.itemsMissing")).replace("{count}", String(dishMissing)));
                         }
                         return (
                           <i
@@ -547,7 +556,7 @@ export default function CategoriesPage() {
                     <div style={{ width: 92, display: "flex", gap: 4, justifyContent: "flex-end" }}>
                       <button
                         onClick={(e) => openEditModal(category, e)}
-                        title="Edit"
+                        title={t("categories.row.actionEdit")}
                         style={{ width: 28, height: 28, border: "none", background: "transparent", borderRadius: 4, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
                         <i className="fa-solid fa-pen" style={{ fontSize: 11 }} />
@@ -555,14 +564,14 @@ export default function CategoriesPage() {
                       <button
                         onClick={(e) => handleDeleteCategory(category, e)}
                         disabled={deletingCategoryId === category.id}
-                        title="Delete"
+                        title={t("categories.row.actionDelete")}
                         style={{ width: 28, height: 28, border: "none", background: "transparent", borderRadius: 4, color: deletingCategoryId === category.id ? "#C8C3BC" : "#DC2626", cursor: deletingCategoryId === category.id ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
                         <i className={deletingCategoryId === category.id ? "fa-solid fa-spinner fa-spin" : "fa-solid fa-trash"} style={{ fontSize: 11 }} />
                       </button>
                       <Link
                         href={`/admin?s=entries&category=${category.id}`}
-                        title="View items"
+                        title={t("categories.row.actionViewItems")}
                         style={{ width: 28, height: 28, border: "none", background: "transparent", borderRadius: 4, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
                       >
                         <i className="fa-solid fa-chevron-right" style={{ fontSize: 11 }} />
@@ -578,20 +587,20 @@ export default function CategoriesPage() {
         {/* Bulk action bar */}
         {selected.size > 0 && (
           <div style={{ position: "sticky", bottom: 16, marginTop: 16, background: "#1F1A14", color: "#fff", borderRadius: 8, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>{selected.size} selected</span>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>{t("categories.bulk.selected").replace("{count}", String(selected.size))}</span>
             <div style={{ flex: 1 }} />
             <button style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 500, padding: "6px 10px", borderRadius: 5, cursor: "pointer", display: "inline-flex", gap: 5, alignItems: "center" }}>
-              <i className="fa-solid fa-language" /> Traduci
+              <i className="fa-solid fa-language" /> {t("categories.bulk.translate")}
             </button>
             <button style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 500, padding: "6px 10px", borderRadius: 5, cursor: "pointer", display: "inline-flex", gap: 5, alignItems: "center" }}>
-              <i className="fa-solid fa-copy" /> Duplica
+              <i className="fa-solid fa-copy" /> {t("categories.bulk.duplicate")}
             </button>
             <div style={{ width: 1, background: "rgba(255,255,255,.15)", alignSelf: "stretch" }} />
             <button
               onClick={() => setSelected(new Set())}
               style={{ background: "transparent", border: "none", color: "rgba(255,255,255,.5)", fontSize: 12, padding: "6px 10px", borderRadius: 5, cursor: "pointer" }}
             >
-              Annulla
+              {t("common.cancel")}
             </button>
           </div>
         )}
@@ -602,10 +611,10 @@ export default function CategoriesPage() {
 
         {/* Completeness card */}
         <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>Menu completeness</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>{t("categories.rail.menuCompleteness")}</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 26, fontWeight: 700, color: "#1F1A14", letterSpacing: -0.5 }}>{completeness}%</span>
-            <span style={{ fontSize: 12, color: "#888" }}>translations</span>
+            <span style={{ fontSize: 12, color: "#888" }}>{t("categories.rail.translations")}</span>
           </div>
           <div style={{ height: 6, background: "#E7E5E4", borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
             <div style={{ height: "100%", background: completeness >= 80 ? "#1F8E5A" : completeness >= 50 ? "#B8860B" : "#C47A4F", borderRadius: 3, width: `${completeness}%`, transition: "width .3s" }} />
@@ -613,14 +622,14 @@ export default function CategoriesPage() {
           {missingTranslations > 0 && (
             <div style={{ fontSize: 11, color: "#888" }}>
               <i className="fa-solid fa-triangle-exclamation" style={{ color: "#B8860B", marginRight: 4 }} />
-              {missingTranslations} item{missingTranslations === 1 ? "" : "s"} missing translations
+              {(missingTranslations === 1 ? t("categories.rail.itemMissing") : t("categories.rail.itemsMissing")).replace("{count}", String(missingTranslations))}
             </div>
           )}
         </div>
 
         {/* Top categories */}
         <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Top categories · items</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>{t("categories.rail.topCategories")}</div>
           {topCategories.map((cat, i) => (
             <div key={cat.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < topCategories.length - 1 ? "1px dashed #E7E5E4" : "none" }}>
               <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", border: "1px solid #E7E5E4", fontSize: 10.5, fontWeight: 700, color: "#888", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -640,18 +649,18 @@ export default function CategoriesPage() {
             <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
               <i className="fa-solid fa-lightbulb" style={{ color: "#A15E35", marginTop: 2, fontSize: 14 }} />
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#A15E35" }}>Tip</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#A15E35" }}>{t("categories.rail.tip")}</div>
                 <div style={{ fontSize: 11.5, color: "#6B4A2B", marginTop: 4, lineHeight: 1.45 }}>
                   {missingTranslations === 1
-                    ? "1 item is missing translations."
-                    : `${missingTranslations} items are missing translations.`}{" "}
-                  Complete them to improve the experience for international guests.
+                    ? t("categories.rail.tipOne")
+                    : t("categories.rail.tipMany").replace("{count}", String(missingTranslations))}{" "}
+                  {t("categories.rail.tipSuffix")}
                 </div>
                 <button
-                  onClick={() => setActiveFilter("Incomplete")}
+                  onClick={() => setActiveFilter("incomplete")}
                   style={{ marginTop: 8, background: "transparent", border: "none", color: "#A15E35", fontSize: 11.5, fontWeight: 700, padding: 0, cursor: "pointer" }}
                 >
-                  Filter incomplete →
+                  {t("categories.rail.filterIncomplete")}
                 </button>
               </div>
             </div>
@@ -668,7 +677,7 @@ export default function CategoriesPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid #E7E5E4" }}>
               <div>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1F1A14", margin: 0 }}>
-                  {editingCategory.id === "" ? "New category" : "Edit category"}
+                  {editingCategory.id === "" ? t("categories.modal.newTitle") : t("categories.modal.editTitle")}
                 </h3>
                 {editingCategory.id !== "" && (
                   <div style={{ fontSize: 11.5, color: "#888", marginTop: 2 }}>{editingCategory.name}</div>
@@ -690,13 +699,13 @@ export default function CategoriesPage() {
                 enabledLocales={data?.features?.enabledLocales}
                 disabledLocales={data?.features?.disabledLocales}
                 customLocales={data?.features?.customLocales}
-                fields={[{ key: "name", label: "Nome", sourceValue: editName }]}
+                fields={[{ key: "name", label: t("categories.modal.fieldName"), sourceValue: editName }]}
                 i18n={editI18n as Record<string, Record<string, string>>}
                 onI18nChange={(updated) => setEditI18n(updated as I18nData)}
               >
                 <div>
                   <label style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>
-                    Nome categoria <span style={{ color: "#C47A4F" }}>*</span>
+                    {t("categories.modal.nameLabel")} <span style={{ color: "#C47A4F" }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -720,14 +729,14 @@ export default function CategoriesPage() {
                   onClick={() => setEditingCategory(null)}
                   style={{ flex: 1, height: 40, border: "1px solid #E7E5E4", borderRadius: 7, background: "#fff", color: "#424242", fontWeight: 500, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
                 >
-                  Annulla
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleSaveCategory}
                   disabled={saving || !editName.trim()}
                   style={{ flex: 2, height: 40, border: "none", borderRadius: 7, background: "#C47A4F", color: "#fff", fontWeight: 600, fontSize: 13, cursor: saving ? "wait" : "pointer", fontFamily: "inherit", opacity: (saving || !editName.trim()) ? 0.6 : 1 }}
                 >
-                  {saving ? "Salvataggio..." : editingCategory.id === "" ? "Crea categoria" : "Salva modifiche"}
+                  {saving ? t("common.saving") : editingCategory.id === "" ? t("categories.modal.creating") : t("categories.modal.savingChanges")}
                 </button>
               </div>
             </div>

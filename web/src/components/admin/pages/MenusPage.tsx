@@ -14,6 +14,7 @@ import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { SortableList, DragHandle } from "@/components/admin/SortableList";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
 import { MenuIcon, MENU_ICON_KINDS, MENU_ICON_LABELS, type MenuIconKind } from "@/components/menu/MenuIcon";
+import { useTranslations } from "@/lib/i18n";
 
 interface I18nData {
   [locale: string]: { title?: string };
@@ -22,6 +23,7 @@ interface I18nData {
 const CODE_RE = /^[a-z0-9-]+$/;
 
 export default function MenusPage() {
+  const t = useTranslations("admin");
   const { loadRestaurant } = useRestaurantStore();
   const categories = useCategories();
 
@@ -52,7 +54,7 @@ export default function MenusPage() {
       const res = await fetchMenus();
       setMenus(res.menus);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Errore caricamento menu");
+      setLoadError(err instanceof Error ? err.message : t("menus.loadError"));
     }
   };
 
@@ -79,11 +81,11 @@ export default function MenusPage() {
     const code = newCode.trim().toLowerCase();
     const title = newTitle.trim();
     if (!CODE_RE.test(code)) {
-      setCreateError("Codice non valido (minuscolo, cifre, trattini)");
+      setCreateError(t("menus.invalidCode"));
       return;
     }
     if (!title) {
-      setCreateError("Il titolo è obbligatorio");
+      setCreateError(t("menus.titleRequired"));
       return;
     }
     try {
@@ -94,7 +96,7 @@ export default function MenusPage() {
       await refresh();
       await loadRestaurant({ force: true });
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Errore creazione menu";
+      const msg = err instanceof ApiError ? err.message : t("menus.createFailed");
       setCreateError(msg);
     }
   };
@@ -114,11 +116,11 @@ export default function MenusPage() {
     const title = editTitle.trim();
     const code = editCode.trim().toLowerCase();
     if (!CODE_RE.test(code)) {
-      setEditError("Codice non valido (minuscolo, cifre, trattini)");
+      setEditError(t("menus.invalidCode"));
       return;
     }
     if (!title) {
-      setEditError("Il titolo è obbligatorio");
+      setEditError(t("menus.titleRequired"));
       return;
     }
     setSaving(true);
@@ -129,7 +131,7 @@ export default function MenusPage() {
       await refresh();
       await loadRestaurant({ force: true });
     } catch (err) {
-      setEditError(err instanceof ApiError ? err.message : "Errore salvataggio");
+      setEditError(err instanceof ApiError ? err.message : t("menus.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -172,24 +174,24 @@ export default function MenusPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-gray-500">Caricamento menu...</div>;
+    return <div className="p-8 text-gray-500">{t("menus.loading")}</div>;
   }
 
   return (
     <div className="adm-scroll" style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "20px 24px" }}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wide text-primary">Menu</div>
-          <h1 className="text-xl font-bold text-gray-900">Gestione menu</h1>
+          <div className="text-xs font-bold uppercase tracking-wide text-primary">{t("layout.nav.menu")}</div>
+          <h1 className="text-xl font-bold text-gray-900">{t("menus.title")}</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Crea menu separati (es. Cibo, Bevande, Pranzo) e assegna ogni piatto ai menu giusti dalla pagina Piatti.
+            {t("menus.subtitle")}
           </p>
         </div>
         <button
           onClick={() => setCreating(true)}
           className="px-3 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary/90"
         >
-          + Nuovo menu
+          {t("menus.newMenu")}
         </button>
       </div>
 
@@ -201,19 +203,19 @@ export default function MenusPage() {
 
       {creating && (
         <div className="mb-4 p-4 bg-white border rounded-lg">
-          <h3 className="font-semibold text-gray-800 mb-2">Nuovo menu</h3>
+          <h3 className="font-semibold text-gray-800 mb-2">{t("menus.newMenuTitle")}</h3>
           <div className="grid grid-cols-2 gap-2">
             <input
               autoFocus
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
-              placeholder="codice (es. food, drinks, lunch)"
+              placeholder={t("menus.codePlaceholder")}
               className="px-3 py-2 border rounded text-sm"
             />
             <input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Titolo visualizzato"
+              placeholder={t("menus.titlePlaceholder")}
               className="px-3 py-2 border rounded text-sm"
             />
           </div>
@@ -225,13 +227,13 @@ export default function MenusPage() {
               onClick={() => { setCreating(false); setCreateError(null); }}
               className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100"
             >
-              Annulla
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleCreate}
               className="px-3 py-2 rounded text-sm font-semibold bg-primary text-white hover:bg-primary/90"
             >
-              Crea
+              {t("common.create")}
             </button>
           </div>
         </div>
@@ -239,7 +241,7 @@ export default function MenusPage() {
 
       {menus.length === 0 ? (
         <div className="p-8 text-center text-gray-500 bg-white rounded-lg border">
-          Nessun menu. Creane uno per iniziare.
+          {t("menus.empty")}
         </div>
       ) : (
         <div className="bg-white rounded-lg border divide-y">
@@ -258,12 +260,12 @@ export default function MenusPage() {
                       {menu.title}
                       {!menu.published && (
                         <span className="text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-                          Bozza
+                          {t("menus.draft")}
                         </span>
                       )}
                     </div>
                     <div className="text-xs text-gray-500">
-                      <code>{menu.code}</code> · {entryCount} {entryCount === 1 ? "piatto" : "piatti"}
+                      <code>{menu.code}</code> · {entryCount} {entryCount === 1 ? t("menus.entryOne") : t("menus.entryMany")}
                     </div>
                   </div>
                   <button
@@ -271,14 +273,14 @@ export default function MenusPage() {
                     className={`px-2 py-1 text-xs rounded font-semibold ${
                       menu.published ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"
                     }`}
-                    title={menu.published ? "Pubblicato — clicca per nascondere" : "In bozza — clicca per pubblicare"}
+                    title={menu.published ? t("menus.publishedTooltip") : t("menus.draftTooltip")}
                   >
-                    {menu.published ? "Pubblicato" : "Bozza"}
+                    {menu.published ? t("menus.published") : t("menus.draft")}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeleting(menu); }}
                     className="p-2 text-red-500 hover:bg-red-50 rounded"
-                    title="Elimina menu"
+                    title={t("menus.deleteTooltip")}
                   >
                     <i className="fa-solid fa-trash" style={{ fontSize: 12 }} />
                   </button>
@@ -294,7 +296,7 @@ export default function MenusPage() {
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
           <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center z-10">
-              <h3 className="font-bold text-lg">Modifica menu</h3>
+              <h3 className="font-bold text-lg">{t("menus.editTitle")}</h3>
               <button onClick={() => setEditing(null)} className="p-2 hover:bg-gray-100 rounded-full">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -303,17 +305,17 @@ export default function MenusPage() {
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Codice (URL slug)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("menus.codeLabel")}</label>
                 <input
                   value={editCode}
                   onChange={(e) => setEditCode(e.target.value)}
                   className="w-full px-3 py-2 border rounded text-sm font-mono"
                 />
-                <p className="text-xs text-gray-500 mt-1">Usato in /menu?type={editCode || "..."}</p>
+                <p className="text-xs text-gray-500 mt-1">{t("menus.codeHint").replace("{code}", editCode || "...")}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Icona</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("menus.iconLabel")}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {MENU_ICON_KINDS.map((kind) => {
                     const selected = kind === editIcon;
@@ -338,11 +340,11 @@ export default function MenusPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("menus.titleLabel")}</label>
                 <TranslationTabs
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
-                  fields={[{ key: "title", label: "Titolo", sourceValue: editTitle }]}
+                  fields={[{ key: "title", label: t("menus.fieldTitle"), sourceValue: editTitle }]}
                   i18n={editI18n as Record<string, Record<string, string>>}
                   onI18nChange={(updated) => setEditI18n(updated as I18nData)}
                 >
@@ -350,7 +352,7 @@ export default function MenusPage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="w-full px-3 py-2 border rounded text-sm"
-                    placeholder="Titolo del menu"
+                    placeholder={t("menus.editTitlePlaceholder")}
                   />
                 </TranslationTabs>
               </div>
@@ -360,13 +362,13 @@ export default function MenusPage() {
               )}
 
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setEditing(null)} className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100">Annulla</button>
+                <button onClick={() => setEditing(null)} className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100">{t("common.cancel")}</button>
                 <button
                   onClick={handleSaveEdit}
                   disabled={saving}
                   className="px-3 py-2 rounded text-sm font-semibold bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {saving ? "Salvataggio..." : "Salva"}
+                  {saving ? t("common.saving") : t("common.save")}
                 </button>
               </div>
             </div>
@@ -378,18 +380,18 @@ export default function MenusPage() {
       {deleting && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-5 max-w-md w-full">
-            <h3 className="font-bold text-lg text-gray-900">Elimina &ldquo;{deleting.title}&rdquo;?</h3>
+            <h3 className="font-bold text-lg text-gray-900">{t("menus.deleteTitle").replace("{name}", deleting.title)}</h3>
             <p className="text-sm text-gray-600 mt-2">
-              I piatti restano ma perdono l&apos;associazione a questo menu. I piatti che erano solo in questo menu finiranno nel filtro &ldquo;Senza menu&rdquo; e potrai riassegnarli.
+              {t("menus.deleteConfirm")}
             </p>
             <div className="mt-4 flex gap-2 justify-end">
-              <button onClick={() => setDeleting(null)} className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100">Annulla</button>
+              <button onClick={() => setDeleting(null)} className="px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-100">{t("common.cancel")}</button>
               <button
                 onClick={handleDelete}
                 disabled={deletingId === deleting.id}
                 className="px-3 py-2 rounded text-sm font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
               >
-                {deletingId === deleting.id ? "Eliminazione..." : "Elimina"}
+                {deletingId === deleting.id ? t("common.deleting") : t("common.delete")}
               </button>
             </div>
           </div>

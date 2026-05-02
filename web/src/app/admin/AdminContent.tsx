@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getMe, type MeResponse } from "@/lib/api";
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
+import { useTranslations } from "@/lib/i18n";
 
 interface AuthState {
   loading: boolean;
@@ -26,6 +27,7 @@ export default function AdminContent({
 }: {
   children: React.ReactNode;
 }) {
+  const t = useTranslations("admin");
   const searchParams = useSearchParams();
   const [authState, setAuthState] = useState<AuthState>({
     loading: true,
@@ -76,7 +78,7 @@ export default function AdminContent({
   if (authState.loading) {
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FBFAF9", fontFamily: "system-ui, sans-serif" }}>
-        <div style={{ color: "#888", fontSize: 13 }}>Caricamento...</div>
+        <div style={{ color: "#888", fontSize: 13 }}>{t("common.loading")}</div>
       </div>
     );
   }
@@ -88,10 +90,10 @@ export default function AdminContent({
     return (
       <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FBFAF9", fontFamily: "system-ui, sans-serif", padding: 16 }}>
         <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,.1)", padding: 32, maxWidth: 360, width: "100%", textAlign: "center" }}>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>Sessione non valida</h1>
-          <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>Impossibile verificare l&apos;autenticazione. Aggiorna la pagina o ricontrolla la configurazione di Cloudflare Access.</p>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>{t("layout.invalidSession")}</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>{t("layout.invalidSessionDesc")}</p>
           <button onClick={handleSignOut} style={{ padding: "8px 20px", background: "#F4F2EE", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, color: "#424242", cursor: "pointer" }}>
-            Riconnetti
+            {t("layout.reconnect")}
           </button>
         </div>
       </div>
@@ -105,11 +107,11 @@ export default function AdminContent({
           <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <i className="fa-solid fa-ban" style={{ color: "#DC2626", fontSize: 18 }} />
           </div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>Accesso negato</h1>
-          <p style={{ fontSize: 13, color: "#888", margin: "0 0 6px" }}>Il tuo indirizzo email non è in ADMIN_EMAILS.</p>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1F1A14", margin: "0 0 8px" }}>{t("layout.accessDenied")}</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 6px" }}>{t("layout.notInAdminEmails")}</p>
           <p style={{ fontSize: 12, color: "#BBB", margin: "0 0 20px", fontFamily: "monospace", wordBreak: "break-all" }}>{authState.user.email}</p>
           <button onClick={handleSignOut} style={{ padding: "8px 20px", background: "#F4F2EE", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, color: "#424242", cursor: "pointer" }}>
-            Esci
+            {t("common.signOut")}
           </button>
         </div>
       </div>
@@ -153,9 +155,9 @@ export default function AdminContent({
   const s = (section: string, extra = "") => `/admin?s=${section}${extra}`;
 
   const topNavItems: { href: string; label: string; matchPrefix?: string }[] = [
-    { href: s("categories"), label: "Menu" },
-    { href: s("analytics"), label: "Analytics" },
-    { href: s("settings-profile"), label: "Settings", matchPrefix: "settings" },
+    { href: s("categories"), label: t("layout.nav.menu") },
+    { href: s("analytics"), label: t("layout.nav.analytics") },
+    { href: s("settings-profile"), label: t("layout.nav.settings"), matchPrefix: "settings" },
   ];
 
   const firstCategoryId = categories[0]?.id;
@@ -164,19 +166,19 @@ export default function AdminContent({
     : s("categories");
 
   const gestioneItems: { href: string; icon: string; label: string; count?: number | string }[] = [
-    { href: s("menus"), icon: "fa-book-open", label: "Menus" },
-    { href: s("categories"), icon: "fa-layer-group", label: "Categories", count: categories.length },
-    { href: entriesHref, icon: "fa-utensils", label: "Items", count: totalEntries },
-    { href: s("hours"), icon: "fa-clock", label: "Hours" },
-    { href: s("analytics"), icon: "fa-chart-simple", label: "Analytics" },
+    { href: s("menus"), icon: "fa-book-open", label: t("layout.section.menus") },
+    { href: s("categories"), icon: "fa-layer-group", label: t("layout.section.categories"), count: categories.length },
+    { href: entriesHref, icon: "fa-utensils", label: t("layout.section.items"), count: totalEntries },
+    { href: s("hours"), icon: "fa-clock", label: t("layout.section.hours") },
+    { href: s("analytics"), icon: "fa-chart-simple", label: t("layout.section.analytics") },
   ];
 
   const settingsItems: { href: string; icon: string; label: string }[] = [
-    { href: s("settings-profile"), icon: "fa-user", label: "Profile" },
-    { href: s("settings-languages"), icon: "fa-language", label: "Languages" },
-    { href: s("settings-communications"), icon: "fa-bullhorn", label: "Announcements" },
-    { href: s("settings-chat-ai"), icon: "fa-robot", label: "Chat AI" },
-    { href: s("settings-publishing"), icon: "fa-globe", label: "Publishing" },
+    { href: s("settings-profile"), icon: "fa-user", label: t("layout.section.profile") },
+    { href: s("settings-languages"), icon: "fa-language", label: t("layout.section.languages") },
+    { href: s("settings-communications"), icon: "fa-bullhorn", label: t("layout.section.announcements") },
+    { href: s("settings-chat-ai"), icon: "fa-robot", label: t("layout.section.chatAi") },
+    { href: s("settings-publishing"), icon: "fa-globe", label: t("layout.section.publishing") },
   ];
 
   const isActive = (href: string) => {
@@ -204,7 +206,7 @@ export default function AdminContent({
             <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.1, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {restaurantName}
             </div>
-            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.6)" }}>Menu Admin</div>
+            <div style={{ fontSize: 10.5, color: "rgba(255,255,255,.6)" }}>{t("layout.menuAdmin")}</div>
           </div>
         </div>
 
@@ -239,7 +241,7 @@ export default function AdminContent({
             onClick={handleSignOut}
             style={{ background: "transparent", border: "none", color: "rgba(255,255,255,.5)", fontSize: 11.5, cursor: "pointer", padding: "4px 6px", borderRadius: 4 }}
           >
-            Sign out
+            {t("common.signOutShort")}
           </button>
         </div>
       </header>
@@ -261,7 +263,7 @@ export default function AdminContent({
           )}
 
           <div style={{ padding: "0 10px", marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Manage</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>{t("layout.manage")}</div>
             {gestioneItems.map((item) => (
               <Link
                 key={item.href}
@@ -290,7 +292,7 @@ export default function AdminContent({
           </div>
 
           <div style={{ padding: "0 10px", marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>Settings</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9A9590", textTransform: "uppercase", letterSpacing: 0.6, padding: "0 6px 6px" }}>{t("layout.settings")}</div>
             {settingsItems.map((item) => (
               <Link
                 key={item.href}
@@ -318,7 +320,7 @@ export default function AdminContent({
           <div style={{ marginTop: "auto", padding: "0 10px" }}>
             <div style={{ background: "#FBFAF9", border: "1px solid #E7E5E4", borderRadius: 6, padding: "10px 12px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#424242" }}>Completeness</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#424242" }}>{t("layout.completeness")}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#1F8E5A" }}>{completeness}%</span>
               </div>
               <div style={{ height: 4, background: "#E7E5E4", borderRadius: 2, overflow: "hidden" }}>
@@ -326,8 +328,10 @@ export default function AdminContent({
               </div>
               <div style={{ fontSize: 10.5, color: "#888", marginTop: 6 }}>
                 {entriesWithMissingTranslations === 0
-                  ? "All items translated"
-                  : `${entriesWithMissingTranslations} item${entriesWithMissingTranslations === 1 ? "" : "s"} missing translations`}
+                  ? t("layout.allItemsTranslated")
+                  : (entriesWithMissingTranslations === 1
+                      ? t("layout.itemsMissingTranslations").replace("{count}", String(entriesWithMissingTranslations))
+                      : t("layout.itemsMissingTranslationsPlural").replace("{count}", String(entriesWithMissingTranslations)))}
               </div>
             </div>
           </div>

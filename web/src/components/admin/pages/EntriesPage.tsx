@@ -9,26 +9,27 @@ import { ApiError, updateEntry, createEntry, reorderEntries, deleteEntry, moveEn
 import { useRestaurantStore, useCategories } from "@/stores/restaurantStore";
 import { SortableList, DragHandle } from "@/components/admin/SortableList";
 import { TranslationTabs } from "@/components/admin/TranslationTabs";
+import { useTranslations } from "@/lib/i18n";
 
 const STANDARD_TRANSLATION_LOCALES = ["en", "de", "fr", "es", "nl", "ru", "pt"];
 const TRANSLATE_THROTTLE_MS = 2200; // Gentle pacing: ~27 requests/min, below backend's 30/min limit.
 
-// All available allergens
-const ALLERGENS = [
-  { id: "Glutine", label: "Glutine" },
-  { id: "Crostacei", label: "Crostacei" },
-  { id: "Uova", label: "Uova" },
-  { id: "Pesce", label: "Pesce" },
-  { id: "Arachidi", label: "Arachidi" },
-  { id: "Soia", label: "Soia" },
-  { id: "Latte-e-Derivati", label: "Latte e Derivati" },
-  { id: "Frutta-a-Guscio", label: "Frutta a Guscio" },
-  { id: "Sedano", label: "Sedano" },
-  { id: "Senape", label: "Senape" },
-  { id: "Sesamo", label: "Sesamo" },
-  { id: "Anidride-Solforosa-e-Solfiti", label: "Solfiti" },
-  { id: "Lupini", label: "Lupini" },
-  { id: "Molluschi", label: "Molluschi" },
+// All available allergen ids — labels are looked up via t("entries.allergen.<id>")
+const ALLERGEN_IDS = [
+  "Glutine",
+  "Crostacei",
+  "Uova",
+  "Pesce",
+  "Arachidi",
+  "Soia",
+  "Latte-e-Derivati",
+  "Frutta-a-Guscio",
+  "Sedano",
+  "Senape",
+  "Sesamo",
+  "Anidride-Solforosa-e-Solfiti",
+  "Lupini",
+  "Molluschi",
 ];
 
 interface I18nData {
@@ -71,6 +72,7 @@ function RichTextEditor({
   placeholder?: string;
   rows?: number;
 }) {
+  const t = useTranslations("admin");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const insertFormatting = (before: string, after: string) => {
@@ -103,7 +105,7 @@ function RichTextEditor({
           type="button"
           onClick={() => insertFormatting("<b>", "</b>")}
           className="px-2 py-1 text-sm font-bold hover:bg-gray-200 rounded"
-          title="Grassetto"
+          title={t("entries.editor.bold")}
         >
           B
         </button>
@@ -111,7 +113,7 @@ function RichTextEditor({
           type="button"
           onClick={() => insertFormatting("<i>", "</i>")}
           className="px-2 py-1 text-sm italic hover:bg-gray-200 rounded"
-          title="Corsivo"
+          title={t("entries.editor.italic")}
         >
           I
         </button>
@@ -119,7 +121,7 @@ function RichTextEditor({
           type="button"
           onClick={() => insertFormatting("<u>", "</u>")}
           className="px-2 py-1 text-sm underline hover:bg-gray-200 rounded"
-          title="Sottolineato"
+          title={t("entries.editor.underline")}
         >
           U
         </button>
@@ -155,6 +157,7 @@ function RichText({ html, className }: { html: string; className?: string }) {
 }
 
 export default function EntriesPage() {
+  const t = useTranslations("admin");
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryId = searchParams.get("category");
@@ -237,7 +240,7 @@ export default function EntriesPage() {
     const cachedCat = categoriesCache.get(catPath);
 
     if (!cachedCat) {
-      setError("Categoria non trovata");
+      setError("entries.categoryNotFound");
       setLoading(false);
       return;
     }
@@ -279,7 +282,7 @@ export default function EntriesPage() {
 
   useEffect(() => {
     if (!categoryId) {
-      setError("Categoria non specificata");
+      setError("entries.categoryNotSpecified");
       setLoading(false);
     }
   }, [categoryId]);
@@ -331,7 +334,7 @@ export default function EntriesPage() {
   };
 
   const describeWorkItem = (item: { entry: MenuEntry; locale: string; field: "name" | "desc" }) =>
-    `${item.entry.name} → ${item.locale.toUpperCase()} (${item.field === "name" ? "nome" : "descrizione"})`;
+    `${item.entry.name} → ${item.locale.toUpperCase()} (${item.field === "name" ? t("entries.fieldNameLabel") : t("entries.fieldDescLabel")})`;
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0] || !editingEntry || !categoryId) return;
@@ -351,7 +354,7 @@ export default function EntriesPage() {
       );
     } catch (err) {
       console.error("Error uploading image:", err);
-      setSaveError("Errore nel caricamento dell'immagine");
+      setSaveError(t("entries.uploadFailed"));
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) {
@@ -377,11 +380,11 @@ export default function EntriesPage() {
           )
         );
       } else {
-        setSaveError("Errore nella rimozione dell'immagine");
+        setSaveError(t("entries.removeImageFailed"));
       }
     } catch (err) {
       console.error("Error deleting image:", err);
-      setSaveError("Errore nella rimozione dell'immagine");
+      setSaveError(t("entries.removeImageFailed"));
     } finally {
       setUploadingImage(false);
     }
@@ -417,7 +420,7 @@ export default function EntriesPage() {
       closeEditModal();
     } catch (err) {
       console.error("Error saving entry:", err);
-      setSaveError("Errore nel salvataggio");
+      setSaveError(t("entries.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -485,7 +488,7 @@ export default function EntriesPage() {
       closeEditModal();
     } catch (err) {
       console.error("Error creating entry:", err);
-      setSaveError("Errore nella creazione del piatto");
+      setSaveError(t("entries.createFailed"));
     } finally {
       setSaving(false);
     }
@@ -542,7 +545,7 @@ export default function EntriesPage() {
       router.push(`/admin?s=entries&category=${targetCategoryId}`);
     } catch (err) {
       console.error("Error moving entry:", err);
-      setSaveError("Errore nello spostamento del piatto");
+      setSaveError(t("entries.moveFailed"));
     } finally {
       setMovingEntry(false);
     }
@@ -587,13 +590,13 @@ export default function EntriesPage() {
     }
 
     if (workItems.length === 0) {
-      setBulkProgress({ done: 0, total: 0, success: 0, failed: 0, current: "Tutte le traduzioni sono già complete." });
+      setBulkProgress({ done: 0, total: 0, success: 0, failed: 0, current: t("entries.bulk.allComplete") });
       setTimeout(() => setBulkProgress(null), 3000);
       return;
     }
 
     setBulkTranslating(true);
-    setBulkProgress({ done: 0, total: workItems.length, success: 0, failed: 0, current: "Preparazione..." });
+    setBulkProgress({ done: 0, total: workItems.length, success: 0, failed: 0, current: t("entries.bulk.preparing") });
 
     // Build mutable i18n maps per entry
     const i18nByEntry: Record<string, I18nData> = {};
@@ -628,7 +631,7 @@ export default function EntriesPage() {
             success,
             failed,
             current,
-            status: "Pausa automatica, riprendo tra poco...", 
+            status: t("entries.bulk.autoPause"),
           });
           await sleep(60_000);
         }
@@ -641,7 +644,7 @@ export default function EntriesPage() {
         success,
         failed,
         current,
-        status: hasMore ? "Traduzione in corso..." : undefined,
+        status: hasMore ? t("entries.bulk.translationInProgress") : undefined,
       });
       if (hasMore) await sleep(TRANSLATE_THROTTLE_MS);
     }
@@ -667,14 +670,14 @@ export default function EntriesPage() {
     );
 
     setBulkTranslating(false);
-    setBulkProgress((prev) => prev ? { ...prev, status: undefined, current: "Completato." } : null);
+    setBulkProgress((prev) => prev ? { ...prev, status: undefined, current: t("entries.bulk.completed") } : null);
     setTimeout(() => setBulkProgress(null), 5000);
   };
 
   if (loading) {
     return (
       <div className="p-4 flex justify-center">
-        <div className="text-gray-500">Caricamento piatti...</div>
+        <div className="text-gray-500">{t("entries.loadingEntries")}</div>
       </div>
     );
   }
@@ -683,26 +686,26 @@ export default function EntriesPage() {
     return (
       <div className="p-4">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+          {t(error)}
         </div>
         <Link
           href={`/admin?s=categories`}
           className="mt-4 inline-block text-primary hover:underline"
         >
-          ← Torna alle categorie
+          {t("entries.backToCategories")}
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-4" style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+    <div className="p-4 space-y-4" style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
       {/* Header with back button */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             href={`/admin?s=categories`}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 rounded-lg shrink-0"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -719,23 +722,23 @@ export default function EntriesPage() {
               />
             </svg>
           </Link>
-          <h2 className="text-lg font-bold text-primary tracking-wider">
+          <h2 className="text-lg font-bold text-primary tracking-wider truncate">
             {category?.name.toUpperCase()}
           </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {allMenus.length > 0 && !reorderMode && (
             <select
               value={menuFilter}
               onChange={(e) => setMenuFilter(e.target.value)}
               className="px-2 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 border-0"
-              title="Filtra per menu"
+              title={t("entries.filterByMenu")}
             >
-              <option value="ALL">Tutti i menu</option>
+              <option value="ALL">{t("entries.allMenus")}</option>
               {allMenus.map((m) => (
                 <option key={m.id} value={m.id}>{m.title}</option>
               ))}
-              <option value="NONE">Senza menu</option>
+              <option value="NONE">{t("entries.noMenu")}</option>
             </select>
           )}
           {hiddenEntriesCount > 0 && !reorderMode && (
@@ -744,10 +747,10 @@ export default function EntriesPage() {
               className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                 showHidden ? "bg-primary text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
-              title={showHidden ? "Nascondi i piatti nascosti" : "Mostra anche i piatti nascosti"}
+              title={showHidden ? t("entries.hideHidden") : t("entries.showHidden")}
             >
               <i className={`fa-solid ${showHidden ? "fa-eye" : "fa-eye-slash"}`} style={{ fontSize: 11 }} />
-              {showHidden ? "Nascondi nascosti" : `Mostra nascosti (${hiddenEntriesCount})`}
+              {showHidden ? t("entries.hideHiddenShort") : t("entries.showHiddenShort").replace("{count}", String(hiddenEntriesCount))}
             </button>
           )}
           <button
@@ -755,7 +758,7 @@ export default function EntriesPage() {
             className={`p-2 rounded-lg transition-colors ${
               reorderMode ? "bg-primary text-white" : "hover:bg-gray-100 text-gray-600"
             }`}
-            title={reorderMode ? "Fine riordino" : "Riordina"}
+            title={reorderMode ? t("entries.endReorder") : t("entries.reorder")}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -775,7 +778,7 @@ export default function EntriesPage() {
           <button
             onClick={handleAddEntry}
             className="p-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-            title="Aggiungi piatto"
+            title={t("entries.addEntry")}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -805,11 +808,11 @@ export default function EntriesPage() {
                   ✨
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">Traduzioni automatiche</p>
+                  <p className="text-sm font-semibold text-gray-900">{t("entries.bulk.title")}</p>
                   <p className="text-xs text-gray-500 truncate">
                     {bulkTranslating
-                      ? bulkProgress?.current ?? "Traduzione in corso..."
-                      : "Completa o aggiorna le traduzioni della categoria"}
+                      ? bulkProgress?.current ?? t("entries.bulk.translationInProgress")
+                      : t("entries.bulk.fillOrUpdate")}
                   </p>
                 </div>
               </div>
@@ -826,19 +829,19 @@ export default function EntriesPage() {
                 disabled={bulkTranslating}
                 className="px-3 py-2 text-xs font-semibold bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Mancanti
+                {t("entries.bulk.missing")}
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm("Ritraduci tutto? Sovrascriverà le traduzioni esistenti.")) {
+                  if (window.confirm(t("entries.bulk.retranslateConfirm"))) {
                     handleBulkTranslate(true);
                   }
                 }}
                 disabled={bulkTranslating}
                 className="px-3 py-2 text-xs font-semibold bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Ritraduci
+                {t("entries.bulk.retranslate")}
               </button>
             </div>
           </div>
@@ -860,11 +863,11 @@ export default function EntriesPage() {
                   </span>
                 )}
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                  {bulkProgress.success} completate
+                  {t("entries.bulk.completedCount").replace("{count}", String(bulkProgress.success))}
                 </span>
                 {bulkProgress.failed > 0 && (
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
-                    {bulkProgress.failed} da ricontrollare
+                    {t("entries.bulk.failedCount").replace("{count}", String(bulkProgress.failed))}
                   </span>
                 )}
                 {bulkProgress.status && (
@@ -960,10 +963,10 @@ export default function EntriesPage() {
                   </p>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {entry.hidden && (
-                      <span className="text-xs text-orange-500 font-medium">NASCOSTO</span>
+                      <span className="text-xs text-orange-500 font-medium">{t("entries.tag.hidden")}</span>
                     )}
                     {entry.menuIds.length === 0 && (
-                      <span className="text-xs text-amber-600 font-medium">NESSUN MENU</span>
+                      <span className="text-xs text-amber-600 font-medium">{t("entries.tag.noMenu")}</span>
                     )}
                     {allMenus.length > 1 && entry.menuIds.length > 0 && entry.menuIds.length < allMenus.length && (
                       <span className="text-xs text-gray-500 font-medium">
@@ -971,15 +974,15 @@ export default function EntriesPage() {
                       </span>
                     )}
                     {entry.outOfStock && (
-                      <span className="text-xs text-red-500 font-medium">ESAURITO</span>
+                      <span className="text-xs text-red-500 font-medium">{t("entries.tag.outOfStock")}</span>
                     )}
                     {entry.frozen && !entry.outOfStock && (
-                      <span className="text-xs text-blue-500 font-medium">CONGELATO</span>
+                      <span className="text-xs text-blue-500 font-medium">{t("entries.tag.frozen")}</span>
                     )}
                   </div>
                   {missingLocales.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="text-[11px] font-medium text-amber-700">Mancano:</span>
+                      <span className="text-[11px] font-medium text-amber-700">{t("entries.missingLabel")}</span>
                       {missingLocales.map((locale) => (
                         <span
                           key={locale}
@@ -1012,7 +1015,7 @@ export default function EntriesPage() {
 
       {entries.length === 0 && (
         <div className="text-center text-gray-500 py-8">
-          Nessun piatto in questa categoria
+          {t("entries.entryEmpty")}
         </div>
       )}
 
@@ -1022,7 +1025,7 @@ export default function EntriesPage() {
           <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center z-10">
-              <h3 className="font-bold text-lg">{isNewEntry ? "Nuovo Piatto" : "Modifica Piatto"}</h3>
+              <h3 className="font-bold text-lg">{isNewEntry ? t("entries.modal.newTitle") : t("entries.modal.editTitle")}</h3>
               <button
                 onClick={closeEditModal}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -1050,7 +1053,7 @@ export default function EntriesPage() {
               {!isNewEntry && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Immagine
+                  {t("entries.modal.imageLabel")}
                 </label>
                 {editingEntry.image ? (
                   <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-200">
@@ -1067,7 +1070,7 @@ export default function EntriesPage() {
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploadingImage}
                         className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 disabled:opacity-50"
-                        title="Cambia immagine"
+                        title={t("entries.modal.changeImage")}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1089,7 +1092,7 @@ export default function EntriesPage() {
                         onClick={handleDeleteImage}
                         disabled={uploadingImage}
                         className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 disabled:opacity-50"
-                        title="Rimuovi immagine"
+                        title={t("entries.modal.removeImage")}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1109,7 +1112,7 @@ export default function EntriesPage() {
                     </div>
                     {uploadingImage && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <div className="text-white font-medium">Caricamento...</div>
+                        <div className="text-white font-medium">{t("common.loading")}</div>
                       </div>
                     )}
                   </div>
@@ -1121,7 +1124,7 @@ export default function EntriesPage() {
                     className="w-full aspect-video rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
                   >
                     {uploadingImage ? (
-                      <div className="text-gray-500">Caricamento...</div>
+                      <div className="text-gray-500">{t("common.loading")}</div>
                     ) : (
                       <>
                         <svg
@@ -1139,7 +1142,7 @@ export default function EntriesPage() {
                           />
                         </svg>
                         <span className="text-sm text-gray-500">
-                          Clicca per caricare un&apos;immagine
+                          {t("entries.modal.uploadImageCta")}
                         </span>
                       </>
                     )}
@@ -1158,7 +1161,7 @@ export default function EntriesPage() {
               {/* Translation Tabs */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome e Descrizione
+                  {t("entries.modal.nameDescLabel")}
                 </label>
                 <TranslationTabs
                   activeTab={activeTranslationTab}
@@ -1167,8 +1170,8 @@ export default function EntriesPage() {
                   disabledLocales={restaurantData?.features?.disabledLocales}
                   customLocales={restaurantData?.features?.customLocales}
                   fields={[
-                    { key: "name", label: "Nome", sourceValue: editingEntry.name },
-                    { key: "desc", label: "Descrizione", multiline: true, sourceValue: editingEntry.desc || "" },
+                    { key: "name", label: t("entries.modal.nameField"), sourceValue: editingEntry.name },
+                    { key: "desc", label: t("entries.modal.descField"), multiline: true, sourceValue: editingEntry.desc || "" },
                   ]}
                   i18n={(editingEntry.i18n || {}) as Record<string, Record<string, string>>}
                   onI18nChange={(updated) =>
@@ -1179,7 +1182,7 @@ export default function EntriesPage() {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        Nome (Italiano - principale)
+                        {t("entries.modal.nameItalianMain")}
                       </label>
                       <input
                         type="text"
@@ -1192,14 +1195,14 @@ export default function EntriesPage() {
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        Descrizione (Italiano - principale)
+                        {t("entries.modal.descItalianMain")}
                       </label>
                       <RichTextEditor
                         value={editingEntry.desc || ""}
                         onChange={(value) =>
                           setEditingEntry({ ...editingEntry, desc: value })
                         }
-                        placeholder="Descrizione del piatto..."
+                        placeholder={t("entries.modal.descPlaceholder")}
                       />
                     </div>
                   </div>
@@ -1210,7 +1213,7 @@ export default function EntriesPage() {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prezzo (€)
+                    {t("entries.modal.priceLabel")}
                   </label>
                   <input
                     type="number"
@@ -1227,7 +1230,7 @@ export default function EntriesPage() {
                 </div>
                 <div className="w-24">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unità
+                    {t("entries.modal.unitLabel")}
                   </label>
                   <input
                     type="text"
@@ -1239,7 +1242,7 @@ export default function EntriesPage() {
                       })
                     }
                     className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="kg, l..."
+                    placeholder={t("entries.modal.unitPlaceholder")}
                   />
                 </div>
               </div>
@@ -1258,7 +1261,7 @@ export default function EntriesPage() {
                     }
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Esaurito</span>
+                  <span className="text-sm">{t("entries.modal.outOfStock")}</span>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -1272,17 +1275,17 @@ export default function EntriesPage() {
                     }
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Congelato</span>
+                  <span className="text-sm">{t("entries.modal.frozen")}</span>
                 </label>
               </div>
 
               {/* Menu memberships */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Menu
+                  {t("entries.modal.menuLabel")}
                 </label>
                 {allMenus.length === 0 ? (
-                  <p className="text-xs text-gray-500">Nessun menu definito. Crea un menu prima di assegnare il piatto.</p>
+                  <p className="text-xs text-gray-500">{t("entries.modal.noMenusDefined")}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {allMenus.map((menu) => {
@@ -1326,42 +1329,45 @@ export default function EntriesPage() {
                     onChange={(e) => setEditingEntry({ ...editingEntry, hidden: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">Nascondi al pubblico (visibile solo nell&apos;admin)</span>
+                  <span className="text-sm">{t("entries.modal.hideFromPublic")}</span>
                 </label>
               </div>
 
               {/* Allergens */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Allergeni
+                  {t("entries.modal.allergensLabel")}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {ALLERGENS.map((allergen) => (
-                    <label
-                      key={allergen.id}
-                      className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                        editingEntry.allergens.includes(allergen.id)
-                          ? "bg-primary/10 border-primary"
-                          : "bg-white border-gray-200 hover:bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={editingEntry.allergens.includes(allergen.id)}
-                        onChange={() => toggleAllergen(allergen.id)}
-                        className="sr-only"
-                      />
-                      <Image
-                        src={`/images/allergeni-${allergen.id}.png`}
-                        alt={allergen.label}
-                        width={24}
-                        height={24}
-                        className="rounded-full"
-                        unoptimized
-                      />
-                      <span className="text-sm">{allergen.label}</span>
-                    </label>
-                  ))}
+                  {ALLERGEN_IDS.map((id) => {
+                    const label = t(`entries.allergen.${id}`);
+                    return (
+                      <label
+                        key={id}
+                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                          editingEntry.allergens.includes(id)
+                            ? "bg-primary/10 border-primary"
+                            : "bg-white border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editingEntry.allergens.includes(id)}
+                          onChange={() => toggleAllergen(id)}
+                          className="sr-only"
+                        />
+                        <Image
+                          src={`/images/allergeni-${id}.png`}
+                          alt={label}
+                          width={24}
+                          height={24}
+                          className="rounded-full"
+                          unoptimized
+                        />
+                        <span className="text-sm">{label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1369,7 +1375,7 @@ export default function EntriesPage() {
               {!isNewEntry && allCategories.length > 1 && (
                 <div className="border-t pt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sposta in un&apos;altra categoria
+                    {t("entries.modal.moveToCategory")}
                   </label>
                   <div className="flex gap-2">
                     <select
@@ -1378,7 +1384,7 @@ export default function EntriesPage() {
                       className="flex-1 px-3 py-2 border rounded-lg bg-white"
                       disabled={movingEntry}
                     >
-                      <option value="">Seleziona categoria...</option>
+                      <option value="">{t("entries.modal.selectCategory")}</option>
                       {allCategories
                         .filter((cat) => cat.id !== categoryId)
                         .map((cat) => (
@@ -1393,7 +1399,7 @@ export default function EntriesPage() {
                       disabled={!selectedTargetCategory || movingEntry}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-blue-700"
                     >
-                      {movingEntry ? "Sposto..." : "Sposta"}
+                      {movingEntry ? t("entries.modal.moving") : t("entries.modal.moveButton")}
                     </button>
                   </div>
                 </div>
@@ -1413,7 +1419,7 @@ export default function EntriesPage() {
                   disabled={saving || uploadingImage || (isNewEntry && !editingEntry.name.trim())}
                   className="w-full py-3 bg-primary text-white rounded-lg font-medium disabled:opacity-50"
                 >
-                  {saving ? "Salvataggio..." : isNewEntry ? "Crea piatto" : "Salva modifiche"}
+                  {saving ? t("common.saving") : isNewEntry ? t("entries.modal.creatingEntry") : t("entries.modal.savingChanges")}
                 </button>
               </div>
             </div>
@@ -1431,9 +1437,17 @@ export default function EntriesPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Elimina piatto</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{t("entries.delete.title")}</h3>
               <p className="text-gray-500 mb-6">
-                Sei sicuro di voler eliminare <strong>{deleteConfirm.name}</strong>? Questa azione non può essere annullata.
+                {(() => {
+                  const parts = t("entries.delete.confirm").split("{name}");
+                  return parts.map((part, i) => (
+                    <span key={i}>
+                      {part}
+                      {i < parts.length - 1 && <strong>{deleteConfirm.name}</strong>}
+                    </span>
+                  ));
+                })()}
               </p>
               <div className="flex gap-3">
                 <button
@@ -1441,14 +1455,14 @@ export default function EntriesPage() {
                   disabled={deleting}
                   className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50"
                 >
-                  Annulla
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleDeleteEntry}
                   disabled={deleting}
                   className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50"
                 >
-                  {deleting ? "Eliminazione..." : "Elimina"}
+                  {deleting ? t("common.deleting") : t("common.delete")}
                 </button>
               </div>
             </div>
